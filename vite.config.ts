@@ -27,7 +27,9 @@ export default defineConfig({
         name: 'Shelf Index',
         short_name: 'Shelf Index',
         description: 'Personal book collection: shelves, reading and word counts.',
-        start_url: './',
+        // The query gives this app a start URL with no history on devices where Chrome kept a stale
+        // install record for ./ (an id change alone didn't clear it). The app ignores the query.
+        start_url: './?source=pwa',
         scope: './',
         display: 'standalone',
         background_color: '#f6f3ee',
