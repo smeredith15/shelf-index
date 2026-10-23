@@ -2,7 +2,7 @@
 
 A personal book-collection app. Scan books in, record which shelf each one is on, track reading pace in words, and keep a running Up Next queue.
 
-It's a Progressive Web App (PWA) hosted on GitHub Pages. Library data lives in a separate private GitHub repo that the app reads and commits to directly. It's built for one person on three devices (an Android phone, an iPad Air and an iPad mini 4) and isn't meant for distribution.
+It's a Progressive Web App (PWA) hosted on Cloudflare Pages. Library data lives in a separate private GitHub repo that the app reads and commits to directly. It's built for one person on three devices (an Android phone, an iPad Air and an iPad mini 4) and isn't meant for distribution.
 
 ---
 
@@ -119,7 +119,7 @@ Each book stores a word count along with how it was obtained:
 ## Architecture
 
 ```
-GitHub Pages                         GitHub (private)
+Cloudflare Pages                     GitHub (private)
 public repo: shelf-index             repo: shelf-index-data
   └─ the app (static files)            ├─ data/books.json
            │                           ├─ data/sessions.json
@@ -129,7 +129,8 @@ public repo: shelf-index             repo: shelf-index-data
   └─ Service worker: offline app
 ```
 
-- **Two repos.** The app repo is public, because free GitHub Pages hosting requires that. The data repo is private, so the collection and reading history aren't published.
+- **Two repos.** The app repo holds only code; Cloudflare Pages builds and serves it from its own address. The data repo is private, so the collection and reading history aren't published.
+- **Its own origin.** The app has a web address to itself rather than a folder on a shared `github.io` site. Browser storage and Chrome's record of installed apps are kept per origin, so sharing one with other apps meant a stuck install record for the site blocked installing Shelf Index on Android.
 - **Local first.** Edits are written to IndexedDB immediately, so the app is fast and works offline.
 - **Batched commits.** Changes are queued and committed after a short idle delay, and when the app goes to the background. Each batch is one commit, made through the Git Data API so several files can change in a single commit.
 - **Merging.** Every record has an `updatedAt` timestamp, and deletes are kept as tombstones. On sync, the newer version of each record wins. If the data repo changed since the last sync (for example, from another device), the app pulls, merges and retries.
@@ -243,13 +244,13 @@ The mini 4 is permanently on iPadOS 15, so the app has to run on Safari 15.
 
 ## Setup
 
-1. **App repo.** Create the public repo `shelf-index`. In Settings → Pages, set the source to **GitHub Actions**. The included workflow builds and deploys on every push to `main`.
+1. **App hosting.** In the Cloudflare dashboard, go to Workers & Pages → Create → Pages → Connect to Git and pick the `shelf-index` repo. Use build command `npm run build` and output directory `dist`. Cloudflare rebuilds on every push to `main` and serves the app at `https://<project>.pages.dev/`. (`.nvmrc` pins Node 22 for the build.)
 2. **Data repo.** Create the private repo `shelf-index-data` and initialize it with a README so it has a default branch. The app creates the data files on its first sync.
 3. **Access token.** Go to GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
    - Repository access: **Only select repositories** → `shelf-index-data`
    - Permissions: **Contents → Read and write**
    - Expiration: whatever you're comfortable with. The app asks for a new token when the old one expires.
-4. **Install on each device.** Open `https://<username>.github.io/shelf-index/app/` (the bare `/shelf-index/` address redirects there), then:
+4. **Install on each device.** Open `https://<project>.pages.dev/`, then:
    - Android (Chrome): menu → **Install app**
    - iPad (Safari): Share → **Add to Home Screen**
 5. **Connect sync.** In the app, go to Settings → Sync and enter the repo owner, repo name and token. The token is stored only on that device and never in either repo.
@@ -268,9 +269,8 @@ npm test          # unit tests (merge, sync against a fake GitHub, lookup, filte
 npm run typecheck
 ```
 
-The build uses a relative base path and hash routing, so it works from any GitHub Pages URL. The app repo doesn't have to be called `shelf-index`.
+The build uses a relative base path and hash routing, so it works at the root of an address or in a folder.
 
-The app is built into `dist/app/` and served one level down, at `/shelf-index/app/`. `scripts/site-root.mjs` writes the two files left at `/shelf-index/`: a redirect that keeps the `#` route, and a service worker that retires the one that used to control that folder. The move happened because Chrome on Android kept a stale "already installed" record for the `/shelf-index/` scope that survived changing the manifest `id` and `start_url`. Browser storage belongs to the whole origin, so moving folders doesn't touch the library data.
 
 - **Testing the camera on a device.** Browsers only allow camera access on HTTPS or localhost. To test scanning on the phone or an iPad during development, either run the dev server with `--host` and HTTPS enabled (Vite's basic-ssl plugin), or test the deployed build.
 - **Test data.** Point dev builds at a separate test data repo so experiments don't touch the real library.
