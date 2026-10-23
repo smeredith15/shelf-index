@@ -69,10 +69,13 @@ Each book stores a word count along with how it was obtained:
 |---|---|---|
 | Looked up | Entered from an outside source that lists the book's word count | Best |
 | Sampled | You count the words on 5 lines, the lines on a full page, and the body pages (excluding front and back matter). Words = (words ÷ 5) × lines per page × body pages. | Good |
+| Audiobook | Length of the unabridged audiobook × narration speed (about 155 words per minute) | Fair, usually within ~10% |
 | Estimated | Page count × words per page for the book's format | Rough |
 
 - The default is 275 words per page.
 - Once some books have looked-up or sampled counts, the app calculates your own average words per page for each format (mass market, trade paperback, hardcover) and uses that for estimates.
+- Once three books have both a looked-up or sampled count and an audiobook length, the app uses your own narration speed instead of 155 words per minute.
+- Audiobook lengths have to be typed in (from Audible, Libro.fm or a library app), because no free API provides them. Only use unabridged editions.
 - Stats show what share of the totals comes from estimates, so you know how rough the numbers are.
 
 ### Stats

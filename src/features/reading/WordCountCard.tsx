@@ -2,9 +2,9 @@ import { useState } from 'preact/hooks';
 import { Field, Modal } from '../../app/ui';
 import { type Book, FORMAT_LABELS } from '../../data/models';
 import { saveBook } from '../../data/store';
-import { type Calibration, type EffectiveWordCount, wordsFromSample } from './logic';
+import { type Calibration, type EffectiveWordCount, formatDuration, parseDuration, wordsFromSample } from './logic';
 
-const SOURCE_LABEL = { 'looked-up': 'Looked up', sampled: 'Sampled', estimated: 'Estimated' } as const;
+const SOURCE_LABEL = { 'looked-up': 'Looked up', sampled: 'Sampled', audiobook: 'Audiobook', estimated: 'Estimated' } as const;
 
 export function WordCountCard({
   book,
@@ -15,8 +15,9 @@ export function WordCountCard({
   effective: EffectiveWordCount | null;
   calibration: Calibration;
 }) {
-  const [dialog, setDialog] = useState<null | 'lookup' | 'sample'>(null);
-  const cal = calibration[book.format ?? 'unknown'];
+  const [dialog, setDialog] = useState<null | 'lookup' | 'sample' | 'audio'>(null);
+  const cal = calibration.pages[book.format ?? 'unknown'];
+  const audio = calibration.audio;
   const pages = book.bodyPages ?? book.pageCount;
 
   return (
@@ -41,8 +42,19 @@ export function WordCountCard({
           ). Rough; set the format and count a few books to improve it.
         </p>
       )}
+      {effective?.source === 'audiobook' && (
+        <p class="tiny muted">
+          {formatDuration(book.audioMinutes!)} unabridged audiobook × {audio.wordsPerMinute} words per minute (
+          {audio.basis === 'own' ? `average of your ${audio.books} counted books with audiobook lengths` : 'typical narration speed'}
+          ). Usually within about 10%.
+        </p>
+      )}
+      {book.audioMinutes && effective?.source !== 'audiobook' && (
+        <p class="tiny muted">Audiobook: {formatDuration(book.audioMinutes)} unabridged.</p>
+      )}
       <div class="actions">
         <button onClick={() => setDialog('sample')}>Sample this book</button>
+        <button onClick={() => setDialog('audio')}>{book.audioMinutes ? 'Edit audiobook length' : 'Audiobook length'}</button>
         <button onClick={() => setDialog('lookup')}>Enter looked-up count</button>
         {book.wordCount && (
           <button class="link" onClick={() => saveBook({ ...book, wordCount: null })}>
@@ -53,6 +65,7 @@ export function WordCountCard({
 
       {dialog === 'lookup' && <LookupDialog book={book} onClose={() => setDialog(null)} />}
       {dialog === 'sample' && <SampleDialog book={book} onClose={() => setDialog(null)} />}
+      {dialog === 'audio' && <AudioDialog book={book} onClose={() => setDialog(null)} />}
     </section>
   );
 }
@@ -124,6 +137,52 @@ function SampleDialog({ book, onClose }: { book: Book; onClose: () => void }) {
           disabled={result === null}
           onClick={async () => {
             await saveBook({ ...book, bodyPages: b, wordCount: { value: result!, source: 'sampled' } });
+            onClose();
+          }}
+        >
+          Save
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function AudioDialog({ book, onClose }: { book: Book; onClose: () => void }) {
+  const [text, setText] = useState(book.audioMinutes ? formatDuration(book.audioMinutes) : '');
+  const [unabridged, setUnabridged] = useState(!!book.audioMinutes);
+  const minutes = parseDuration(text);
+  const valid = minutes !== null && minutes > 0 && unabridged;
+  return (
+    <Modal title="Audiobook length" onClose={onClose}>
+      <p class="muted">
+        From Audible, Libro.fm or your library app. Words are estimated from the length and a typical narration speed, which is
+        calibrated once a few books have both a real count and an audiobook length.
+      </p>
+      <Field label="Length" hint="e.g. 10h 30m or 10:30">
+        <input value={text} autoFocus placeholder="10h 30m" onInput={(e) => setText(e.currentTarget.value)} />
+      </Field>
+      <label class="check">
+        <input type="checkbox" checked={unabridged} onChange={(e) => setUnabridged(e.currentTarget.checked)} />
+        It's the unabridged edition
+      </label>
+      {text && minutes === null && <p class="error tiny">Couldn't read that length. Try 10h 30m or 10:30.</p>}
+      {!unabridged && text && <p class="warn-text tiny">Abridged audiobooks leave out text, so they'd undercount.</p>}
+      <div class="form-actions">
+        {book.audioMinutes && (
+          <button
+            onClick={async () => {
+              await saveBook({ ...book, audioMinutes: null });
+              onClose();
+            }}
+          >
+            Remove
+          </button>
+        )}
+        <button
+          class="primary"
+          disabled={!valid}
+          onClick={async () => {
+            await saveBook({ ...book, audioMinutes: minutes });
             onClose();
           }}
         >

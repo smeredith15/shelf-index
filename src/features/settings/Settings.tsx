@@ -164,6 +164,18 @@ function ReadingSettings() {
           }}
         />
       </Field>
+      <Field label="Default narration speed (words per minute)" hint="Used for audiobook estimates until 3 counted books have audiobook lengths.">
+        <input
+          type="number"
+          min={80}
+          max={300}
+          value={settings.defaultWordsPerMinute}
+          onChange={(e) => {
+            const v = Number(e.currentTarget.value);
+            if (v >= 80 && v <= 300) void saveSettings({ ...settings, defaultWordsPerMinute: v });
+          }}
+        />
+      </Field>
       <table class="calibration">
         <thead>
           <tr>
@@ -174,7 +186,7 @@ function ReadingSettings() {
         </thead>
         <tbody>
           {(Object.keys(FORMAT_LABELS) as Format[]).map((f) => {
-            const c = calibration[f];
+            const c = calibration.pages[f];
             return (
               <tr key={f}>
                 <td>{FORMAT_LABELS[f]}</td>
@@ -185,10 +197,17 @@ function ReadingSettings() {
               </tr>
             );
           })}
+          <tr>
+            <td>Audiobooks</td>
+            <td>{calibration.audio.wordsPerMinute}/min</td>
+            <td class="muted">
+              {calibration.audio.basis === 'own' ? `${calibration.audio.books} of your books` : 'default'}
+            </td>
+          </tr>
         </tbody>
       </table>
       <p class="tiny muted">
-        A format gets its own figure once {MIN_CALIBRATION_BOOKS} books of that format have looked-up or sampled counts.
+        A format gets its own figure once {MIN_CALIBRATION_BOOKS} books of that format have looked-up or sampled counts; audiobooks once {MIN_CALIBRATION_BOOKS} counted books have audiobook lengths.
       </p>
     </>
   );

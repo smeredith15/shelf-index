@@ -52,7 +52,9 @@ export function sessionsFor(sessions: Session[], bookId: string): Session[] {
 // ---------- Word counts ----------
 
 export const FALLBACK_WORDS_PER_PAGE = 275;
-/** Books with a trusted count needed before a format gets its own words-per-page figure. */
+/** About 9,300 words per finished hour, the usual publishing rule of thumb for narration. */
+export const FALLBACK_WORDS_PER_MINUTE = 155;
+/** Books with a trusted count needed before a format (or audio) gets its own figure. */
 export const MIN_CALIBRATION_BOOKS = 3;
 
 /** Words = (words on 5 lines ÷ 5) × lines per page × body pages. */
@@ -71,13 +73,29 @@ export interface FormatCalibration {
   basis: 'own' | 'all' | 'default';
 }
 
-export type Calibration = Record<Format | 'unknown', FormatCalibration>;
+export interface AudioCalibration {
+  wordsPerMinute: number;
+  books: number;
+  basis: 'own' | 'default';
+}
 
-/** Words per page for each format, from books with looked-up or sampled counts. */
-export function calibrate(books: Book[], defaultWordsPerPage = FALLBACK_WORDS_PER_PAGE): Calibration {
-  const trusted = books.filter(
-    (b) => !b.deleted && b.wordCount && b.wordCount.source !== 'estimated' && (pagesFor(b) ?? 0) > 0,
-  );
+export interface Calibration {
+  pages: Record<Format | 'unknown', FormatCalibration>;
+  audio: AudioCalibration;
+}
+
+/** True for counts that came from the book itself rather than an estimate. */
+function isTrusted(book: Book): boolean {
+  return !book.deleted && !!book.wordCount && book.wordCount.source !== 'estimated';
+}
+
+/** Words per page for each format and words per minute for audiobooks, from books with looked-up or sampled counts. */
+export function calibrate(
+  books: Book[],
+  defaultWordsPerPage = FALLBACK_WORDS_PER_PAGE,
+  defaultWordsPerMinute = FALLBACK_WORDS_PER_MINUTE,
+): Calibration {
+  const trusted = books.filter((b) => isTrusted(b) && (pagesFor(b) ?? 0) > 0);
   const ratio = (list: Book[]) =>
     Math.round(list.reduce((s, b) => s + b.wordCount!.value, 0) / list.reduce((s, b) => s + pagesFor(b)!, 0));
 
@@ -91,27 +109,65 @@ export function calibrate(books: Book[], defaultWordsPerPage = FALLBACK_WORDS_PE
     return own.length >= MIN_CALIBRATION_BOOKS ? { wordsPerPage: ratio(own), books: own.length, basis: 'own' } : overall;
   };
 
+  const timed = books.filter((b) => isTrusted(b) && (b.audioMinutes ?? 0) > 0);
+  const audio: AudioCalibration =
+    timed.length >= MIN_CALIBRATION_BOOKS
+      ? {
+          wordsPerMinute: Math.round(
+            timed.reduce((s, b) => s + b.wordCount!.value, 0) / timed.reduce((s, b) => s + b.audioMinutes!, 0),
+          ),
+          books: timed.length,
+          basis: 'own',
+        }
+      : { wordsPerMinute: defaultWordsPerMinute, books: 0, basis: 'default' };
+
   return {
-    'mass-market': forFormat('mass-market'),
-    trade: forFormat('trade'),
-    hardcover: forFormat('hardcover'),
-    other: forFormat('other'),
-    unknown: overall,
+    pages: {
+      'mass-market': forFormat('mass-market'),
+      trade: forFormat('trade'),
+      hardcover: forFormat('hardcover'),
+      other: forFormat('other'),
+      unknown: overall,
+    },
+    audio,
   };
 }
 
 export interface EffectiveWordCount {
   value: number;
-  source: 'looked-up' | 'sampled' | 'estimated';
+  source: 'looked-up' | 'sampled' | 'audiobook' | 'estimated';
 }
 
 /**
- * The count to use in totals: a stored count if there is one, otherwise pages × words per page
- * for the book's format. Estimates aren't stored, so they improve as calibration does.
+ * The count to use in totals, best source first: a looked-up or sampled count, then audiobook
+ * length × narration speed, then a hand-entered estimate, then pages × words per page.
+ * Audiobook and page estimates aren't stored, so they improve as calibration does.
  */
 export function effectiveWordCount(book: Book, calibration: Calibration): EffectiveWordCount | null {
+  if (book.wordCount && book.wordCount.source !== 'estimated') return book.wordCount;
+  if (book.audioMinutes) {
+    return { value: Math.round(book.audioMinutes * calibration.audio.wordsPerMinute), source: 'audiobook' };
+  }
   if (book.wordCount) return book.wordCount;
   const pages = pagesFor(book);
   if (!pages) return null;
-  return { value: Math.round(pages * calibration[book.format ?? 'unknown'].wordsPerPage), source: 'estimated' };
+  return { value: Math.round(pages * calibration.pages[book.format ?? 'unknown'].wordsPerPage), source: 'estimated' };
+}
+
+/** Parses "10:30", "10h 30m", "10h", "630m" or a bare number of minutes. */
+export function parseDuration(text: string): number | null {
+  const t = text.trim().toLowerCase();
+  if (!t) return null;
+  let m = t.match(/^(\d+):(\d{1,2})$/);
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  m = t.match(/^(?:(\d+)\s*h(?:ours?|rs?)?)?\s*(?:(\d+)\s*m(?:in(?:utes?|s)?)?)?$/);
+  if (m && (m[1] || m[2])) return Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0);
+  if (/^\d+$/.test(t)) return Number(t);
+  return null;
+}
+
+export function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
 }

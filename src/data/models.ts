@@ -31,6 +31,8 @@ export interface Book extends Syncable {
   location: { shelfId: string; row: Row } | null;
   queue: { inQueue: boolean; position: number | null };
   wordCount: { value: number; source: WordCountSource } | null;
+  /** Length of the unabridged audiobook in minutes, used to estimate words when there's no count. */
+  audioMinutes?: number | null;
   rating: number | null;
   notes: string;
   /** Path in the data repo, e.g. covers/b_7f3k2.jpg */
@@ -71,6 +73,8 @@ export interface SyncedSettings extends Syncable {
   upNextShelfId: string | null;
   /** Move a book to the Up Next shelf when it joins the queue. */
   upNextAutoMove: boolean;
+  /** Narration speed used for audiobook estimates until enough books calibrate it. */
+  defaultWordsPerMinute: number;
 }
 
 /** Cover image bytes, kept locally and pushed to covers/<bookId>.jpg. */
@@ -130,6 +134,7 @@ export function blankBook(partial: Partial<Book> = {}): Book {
     location: null,
     queue: { inQueue: false, position: null },
     wordCount: null,
+    audioMinutes: null,
     rating: null,
     notes: '',
     cover: null,

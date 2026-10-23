@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type Session, blankBook } from '../../data/models';
 import { daysBetween } from './dates';
-import { calibrate, currentPage, effectiveWordCount, pace, readingDays, wordsFromSample } from './logic';
+import { calibrate, currentPage, effectiveWordCount, formatDuration, pace, parseDuration, readingDays, wordsFromSample } from './logic';
 
 const session = (patch: Partial<Session> = {}): Session => ({
   id: 'r1',
@@ -57,7 +57,7 @@ describe('word counts', () => {
   it('uses the default until enough books are counted, then calibrates per format', () => {
     const counted = (format: 'trade' | 'hardcover', pages: number, words: number) =>
       blankBook({ format, pageCount: pages, wordCount: { value: words, source: 'looked-up' } });
-    expect(calibrate([counted('trade', 300, 90000)], 275).trade).toEqual({ wordsPerPage: 275, books: 0, basis: 'default' });
+    expect(calibrate([counted('trade', 300, 90000)], 275).pages.trade).toEqual({ wordsPerPage: 275, books: 0, basis: 'default' });
 
     const books = [
       counted('trade', 300, 90000),
@@ -66,13 +66,39 @@ describe('word counts', () => {
       counted('hardcover', 400, 160000),
     ];
     const cal = calibrate(books);
-    expect(cal.trade).toEqual({ wordsPerPage: 300, books: 3, basis: 'own' });
+    expect(cal.pages.trade).toEqual({ wordsPerPage: 300, books: 3, basis: 'own' });
     // Hardcover has only one counted book, so it uses the average of all counted books.
-    expect(cal.hardcover).toEqual({ wordsPerPage: 340, books: 4, basis: 'all' });
+    expect(cal.pages.hardcover).toEqual({ wordsPerPage: 340, books: 4, basis: 'all' });
 
     const unknownCount = blankBook({ format: 'trade', bodyPages: 250, pageCount: 270 });
     expect(effectiveWordCount(unknownCount, cal)).toEqual({ value: 75000, source: 'estimated' });
     expect(effectiveWordCount(books[0], cal)).toEqual({ value: 90000, source: 'looked-up' });
     expect(effectiveWordCount(blankBook(), cal)).toBeNull();
+  });
+
+  it('estimates from audiobook length, calibrating narration speed from counted books', () => {
+    const audio = (minutes: number, words?: number) =>
+      blankBook({ audioMinutes: minutes, pageCount: 300, wordCount: words ? { value: words, source: 'looked-up' } : null });
+    expect(calibrate([]).audio).toEqual({ wordsPerMinute: 155, books: 0, basis: 'default' });
+
+    const cal = calibrate([audio(600, 96000), audio(500, 80000), audio(400, 64000)]);
+    expect(cal.audio).toEqual({ wordsPerMinute: 160, books: 3, basis: 'own' });
+
+    // A 10h 30m audiobook beats the page estimate but not a real count.
+    expect(effectiveWordCount(audio(630), cal)).toEqual({ value: 100800, source: 'audiobook' });
+    expect(effectiveWordCount(audio(630, 99000), cal)).toEqual({ value: 99000, source: 'looked-up' });
+    const handEstimate = blankBook({ audioMinutes: 630, wordCount: { value: 50000, source: 'estimated' } });
+    expect(effectiveWordCount(handEstimate, cal)?.source).toBe('audiobook');
+  });
+
+  it('parses and formats durations', () => {
+    expect(parseDuration('10:30')).toBe(630);
+    expect(parseDuration('10h 30m')).toBe(630);
+    expect(parseDuration('10 hrs 5 mins')).toBe(605);
+    expect(parseDuration('9h')).toBe(540);
+    expect(parseDuration('45m')).toBe(45);
+    expect(parseDuration('630')).toBe(630);
+    expect(parseDuration('soon')).toBeNull();
+    expect(formatDuration(630)).toBe('10h 30m');
   });
 });

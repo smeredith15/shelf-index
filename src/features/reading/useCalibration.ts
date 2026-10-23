@@ -8,7 +8,7 @@ export function useCalibration(): Calibration | undefined {
   const books = useLive(liveBooks);
   const settings = useLive(loadSettings);
   return useMemo(
-    () => (books && settings ? calibrate(books, settings.defaultWordsPerPage) : undefined),
+    () => (books && settings ? calibrate(books, settings.defaultWordsPerPage, settings.defaultWordsPerMinute) : undefined),
     [books, settings],
   );
 }
