@@ -261,7 +261,11 @@ npm install
 npm run dev       # local dev server
 npm run build     # production build to dist/
 npm run preview   # serve the production build locally
+npm test          # unit tests (merge, sync against a fake GitHub, lookup, filters)
+npm run typecheck
 ```
+
+The build uses a relative base path and hash routing, so it works from any GitHub Pages URL. The app repo doesn't have to be called `shelf-index`.
 
 - **Testing the camera on a device.** Browsers only allow camera access on HTTPS or localhost. To test scanning on the phone or an iPad during development, either run the dev server with `--host` and HTTPS enabled (Vite's basic-ssl plugin), or test the deployed build.
 - **Test data.** Point dev builds at a separate test data repo so experiments don't touch the real library.
@@ -271,14 +275,14 @@ npm run preview   # serve the production build locally
 ## Roadmap
 
 **Phase 1: Catalog and locations**
-- [ ] App shell, PWA install, offline support
-- [ ] Data model and IndexedDB storage
-- [ ] GitHub sync: pull, merge, batched commits
-- [ ] Barcode scanning and manual search
-- [ ] Cover picker and photographed covers
-- [ ] Library grid/list with sort, filter and search
-- [ ] Locations, cover badges, shelf view, bulk move
-- [ ] Printable shelf labels and shelving mode
+- [x] App shell, PWA install, offline support
+- [x] Data model and IndexedDB storage
+- [x] GitHub sync: pull, merge, batched commits
+- [x] Barcode scanning and manual search
+- [x] Cover picker and photographed covers
+- [x] Library grid/list with sort, filter and search
+- [x] Locations, cover badges, shelf view, bulk move
+- [x] Printable shelf labels and shelving mode
 
 **Phase 2: Reading**
 - [ ] Reading sessions, rereads, DNF, pause/resume

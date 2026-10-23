@@ -1,0 +1,27 @@
+{
+  "name": "shelf-index",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "barcode-detector": "^3.2.3",
+    "dexie": "^4.4.7",
+    "preact": "^10.29.8",
+    "qrcode-generator": "^2.0.4"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "fake-indexeddb": "^6.2.6",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.5"
+  }
+}
