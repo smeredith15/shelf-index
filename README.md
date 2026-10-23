@@ -249,7 +249,7 @@ The mini 4 is permanently on iPadOS 15, so the app has to run on Safari 15.
    - Repository access: **Only select repositories** → `shelf-index-data`
    - Permissions: **Contents → Read and write**
    - Expiration: whatever you're comfortable with. The app asks for a new token when the old one expires.
-4. **Install on each device.** Open `https://<username>.github.io/shelf-index/`, then:
+4. **Install on each device.** Open `https://<username>.github.io/shelf-index/app/` (the bare `/shelf-index/` address redirects there), then:
    - Android (Chrome): menu → **Install app**
    - iPad (Safari): Share → **Add to Home Screen**
 5. **Connect sync.** In the app, go to Settings → Sync and enter the repo owner, repo name and token. The token is stored only on that device and never in either repo.
@@ -269,6 +269,8 @@ npm run typecheck
 ```
 
 The build uses a relative base path and hash routing, so it works from any GitHub Pages URL. The app repo doesn't have to be called `shelf-index`.
+
+The app is built into `dist/app/` and served one level down, at `/shelf-index/app/`. `scripts/site-root.mjs` writes the two files left at `/shelf-index/`: a redirect that keeps the `#` route, and a service worker that retires the one that used to control that folder. The move happened because Chrome on Android kept a stale "already installed" record for the `/shelf-index/` scope that survived changing the manifest `id` and `start_url`. Browser storage belongs to the whole origin, so moving folders doesn't touch the library data.
 
 - **Testing the camera on a device.** Browsers only allow camera access on HTTPS or localhost. To test scanning on the phone or an iPad during development, either run the dev server with `--host` and HTTPS enabled (Vite's basic-ssl plugin), or test the deployed build.
 - **Test data.** Point dev builds at a separate test data repo so experiments don't touch the real library.

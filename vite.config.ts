@@ -9,6 +9,9 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')),
   },
   build: {
+    // The app lives one level down, at /shelf-index/app/: Chrome on Android held a stale install
+    // record for the /shelf-index/ scope. scripts/site-root.mjs fills in the old address.
+    outDir: 'dist/app',
     // The iPad mini 4 is frozen on iPadOS 15.8 (Safari 15).
     target: ['es2020', 'safari15'],
   },
@@ -23,12 +26,10 @@ export default defineConfig({
       },
       manifest: {
         // Stable identity, independent of start_url, so Chrome never confuses installs.
-        id: '/shelf-index/app',
+        id: '/shelf-index/app/',
         name: 'Shelf Index',
         short_name: 'Shelf Index',
         description: 'Personal book collection: shelves, reading and word counts.',
-        // The query gives this app a start URL with no history on devices where Chrome kept a stale
-        // install record for ./ (an id change alone didn't clear it). The app ignores the query.
         start_url: './?source=pwa',
         scope: './',
         display: 'standalone',
