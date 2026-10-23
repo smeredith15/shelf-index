@@ -271,6 +271,8 @@ npm run typecheck
 
 The build uses a relative base path and hash routing, so it works at the root of an address or in a folder.
 
+The GitHub Actions workflow runs the tests on every push and keeps the old address, `smeredith15.github.io/shelf-index/`, forwarding to `shelf-index.pages.dev`. `scripts/pages-redirect.mjs` builds that forwarding site, including service workers that retire the ones left on devices from when the app was served there.
+
 
 - **Testing the camera on a device.** Browsers only allow camera access on HTTPS or localhost. To test scanning on the phone or an iPad during development, either run the dev server with `--host` and HTTPS enabled (Vite's basic-ssl plugin), or test the deployed build.
 - **Test data.** Point dev builds at a separate test data repo so experiments don't touch the real library.

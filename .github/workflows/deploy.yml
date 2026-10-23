@@ -1,4 +1,6 @@
-name: Deploy to GitHub Pages
+# The app is hosted on Cloudflare Pages (shelf-index.pages.dev), which builds from main itself.
+# This workflow runs the checks and keeps the old github.io address forwarding there.
+name: Test and forward old address
 
 on:
   push:
@@ -26,9 +28,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: node scripts/pages-redirect.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: pages
 
   deploy:
     needs: build
