@@ -22,6 +22,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       manifest: {
+        // Stable identity, independent of start_url, so Chrome never confuses installs.
+        id: '/shelf-index/app',
         name: 'Shelf Index',
         short_name: 'Shelf Index',
         description: 'Personal book collection: shelves, reading and word counts.',
@@ -30,10 +32,13 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#f6f3ee',
         theme_color: '#3b2f2a',
+        // PNG only: Android builds its installed app from these, and an SVG with sizes "any" gets
+        // picked first and can leave Chrome thinking the app is installed when the install failed.
         icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-192-maskable.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),
