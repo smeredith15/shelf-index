@@ -3,8 +3,14 @@ import { navigate } from '../../app/router';
 import { Empty } from '../../app/ui';
 import { db } from '../../data/db';
 import { useLive } from '../../data/hooks';
-import { deleteBook, loadLocations, saveBook } from '../../data/store';
+import { saveBookKeepingQueue } from '../../data/reading';
+import { deleteBook, loadLocations } from '../../data/store';
 import { resolveShelves } from '../locations/util';
+import { QueueButton } from '../queue/QueueButton';
+import { effectiveWordCount } from '../reading/logic';
+import { ReadingCard } from '../reading/ReadingCard';
+import { useCalibration } from '../reading/useCalibration';
+import { WordCountCard } from '../reading/WordCountCard';
 import { BookForm } from './BookForm';
 
 export function BookDetail({ id }: { id: string }) {
@@ -12,8 +18,9 @@ export function BookDetail({ id }: { id: string }) {
   const locs = useLive(loadLocations);
   const resolved = useMemo(() => (locs ? resolveShelves(locs) : new Map()), [locs]);
   const [saved, setSaved] = useState(false);
+  const calibration = useCalibration();
 
-  if (book === undefined || !locs) return <div class="page" />;
+  if (book === undefined || !locs || !calibration) return <div class="page" />;
   if (book === null || book.deleted) {
     return (
       <div class="page">
@@ -24,6 +31,8 @@ export function BookDetail({ id }: { id: string }) {
     );
   }
 
+  const effective = effectiveWordCount(book, calibration);
+
   return (
     <div class="page">
       <p>
@@ -31,6 +40,13 @@ export function BookDetail({ id }: { id: string }) {
           ‹ Library
         </a>
       </p>
+      <h1 class="book-title">
+        {book.title}
+        {book.authors.length > 0 && <span class="muted"> · {book.authors.join(', ')}</span>}
+      </h1>
+      <QueueButton book={book} />
+      <ReadingCard book={book} words={effective?.value ?? null} />
+      <WordCountCard book={book} effective={effective} calibration={calibration} />
       {/* key: re-mount when another device's sync replaces this record */}
       <BookForm
         key={book.updatedAt}
@@ -38,7 +54,7 @@ export function BookDetail({ id }: { id: string }) {
         resolved={resolved}
         submitLabel="Save"
         onSubmit={async (b) => {
-          await saveBook(b);
+          await saveBookKeepingQueue(book, b);
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
         }}

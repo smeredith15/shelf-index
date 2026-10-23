@@ -5,12 +5,13 @@ import { Library } from '../features/library/Library';
 import { Labels } from '../features/locations/Labels';
 import { ShelfView } from '../features/locations/ShelfView';
 import { Shelves } from '../features/locations/Shelves';
+import { QueuePage } from '../features/queue/QueuePage';
 import { Settings } from '../features/settings/Settings';
 import { useRoute } from './router';
 import { SyncIndicator } from './SyncIndicator';
 
 const NAV = [
-  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book'] },
+  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book', 'queue'] },
   { href: '#/add', label: 'Add', icon: '＋', match: ['add'] },
   { href: '#/shelves', label: 'Shelves', icon: '🗄', match: ['shelves', 'shelf', 'shelve', 'labels'] },
   { href: '#/settings', label: 'Settings', icon: '⚙', match: ['settings'] },
@@ -27,6 +28,9 @@ export function App() {
       break;
     case 'book':
       page = <BookDetail id={arg} key={arg} />;
+      break;
+    case 'queue':
+      page = <QueuePage />;
       break;
     case 'add':
       page = <AddBook initialMode={params.get('mode') === 'search' ? 'search' : 'scan'} />;

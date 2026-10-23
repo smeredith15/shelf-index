@@ -6,7 +6,11 @@ import { loadSettings, saveSettings } from '../../data/store';
 import { type SyncConfig, loadConfig, saveConfig } from '../../sync/github';
 import { syncNow } from '../../sync/scheduler';
 import { useSyncState } from '../../app/SyncIndicator';
+import { FORMAT_LABELS, type Format } from '../../data/models';
+import { LocationPicker } from '../locations/LocationPicker';
 import { LocationsEditor } from '../locations/LocationsEditor';
+import { MIN_CALIBRATION_BOOKS } from '../reading/logic';
+import { useCalibration } from '../reading/useCalibration';
 
 export function Settings({ section }: { section?: string }) {
   useEffect(() => {
@@ -24,8 +28,12 @@ export function Settings({ section }: { section?: string }) {
         <h2>Locations</h2>
         <LocationsEditor />
       </section>
+      <section id="upnext" class="card">
+        <h2>Up Next</h2>
+        <UpNextSettings />
+      </section>
       <section id="reading" class="card">
-        <h2>Reading</h2>
+        <h2>Word counts</h2>
         <ReadingSettings />
       </section>
       <p class="tiny muted center">Shelf Index · build {__BUILD_TIME__}</p>
@@ -115,21 +123,73 @@ function SyncSettings() {
   );
 }
 
-function ReadingSettings() {
+function UpNextSettings() {
   const settings = useLive(loadSettings);
   if (!settings) return null;
   return (
-    <Field label="Default words per page" hint="Used to estimate word counts until you have enough sampled books.">
-      <input
-        type="number"
-        min={50}
-        max={1000}
-        value={settings.defaultWordsPerPage}
-        onChange={(e) => {
-          const v = Number(e.currentTarget.value);
-          if (v >= 50 && v <= 1000) void saveSettings({ ...settings, defaultWordsPerPage: v });
-        }}
+    <>
+      <p class="muted">Your physical Up Next shelf is an ordinary location. Pick it here.</p>
+      <LocationPicker
+        value={settings.upNextShelfId ? { shelfId: settings.upNextShelfId, row: 'front' } : null}
+        onChange={(loc) => saveSettings({ ...settings, upNextShelfId: loc?.shelfId ?? null })}
       />
-    </Field>
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={settings.upNextAutoMove}
+          disabled={!settings.upNextShelfId}
+          onChange={(e) => saveSettings({ ...settings, upNextAutoMove: e.currentTarget.checked })}
+        />
+        Move books to this shelf when they join the queue
+      </label>
+    </>
+  );
+}
+
+function ReadingSettings() {
+  const settings = useLive(loadSettings);
+  const calibration = useCalibration();
+  if (!settings || !calibration) return null;
+  return (
+    <>
+      <Field label="Default words per page" hint="Used for estimates until you have enough counted books.">
+        <input
+          type="number"
+          min={50}
+          max={1000}
+          value={settings.defaultWordsPerPage}
+          onChange={(e) => {
+            const v = Number(e.currentTarget.value);
+            if (v >= 50 && v <= 1000) void saveSettings({ ...settings, defaultWordsPerPage: v });
+          }}
+        />
+      </Field>
+      <table class="calibration">
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Words/page</th>
+            <th>Based on</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(Object.keys(FORMAT_LABELS) as Format[]).map((f) => {
+            const c = calibration[f];
+            return (
+              <tr key={f}>
+                <td>{FORMAT_LABELS[f]}</td>
+                <td>{c.wordsPerPage}</td>
+                <td class="muted">
+                  {c.basis === 'own' ? `${c.books} of your books` : c.basis === 'all' ? `all ${c.books} counted books` : 'default'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p class="tiny muted">
+        A format gets its own figure once {MIN_CALIBRATION_BOOKS} books of that format have looked-up or sampled counts.
+      </p>
+    </>
   );
 }

@@ -285,10 +285,10 @@ The build uses a relative base path and hash routing, so it works from any GitHu
 - [x] Printable shelf labels and shelving mode
 
 **Phase 2: Reading**
-- [ ] Reading sessions, rereads, DNF, pause/resume
-- [ ] Progress updates
-- [ ] Word counts (looked up, sampled, estimated) with per-format calibration
-- [ ] Up Next gallery
+- [x] Reading sessions, rereads, DNF, pause/resume
+- [x] Progress updates
+- [x] Word counts (looked up, sampled, estimated) with per-format calibration
+- [x] Up Next gallery
 
 **Phase 3: Insight**
 - [ ] Stats for Read and To Read, with a date-range picker

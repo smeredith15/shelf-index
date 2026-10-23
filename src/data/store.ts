@@ -178,12 +178,14 @@ export const DEFAULT_SETTINGS: SyncedSettings = {
   id: 'settings',
   defaultWordsPerPage: 275,
   upNextShelfId: null,
+  upNextAutoMove: false,
   updatedAt: '1970-01-01T00:00:00.000Z',
   deleted: false,
 };
 
 export async function loadSettings(): Promise<SyncedSettings> {
-  return (await db.settings.get('settings')) ?? DEFAULT_SETTINGS;
+  // Spread over the defaults so settings written by older builds pick up new fields.
+  return { ...DEFAULT_SETTINGS, ...(await db.settings.get('settings')) };
 }
 
 export async function saveSettings(settings: SyncedSettings): Promise<void> {

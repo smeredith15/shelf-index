@@ -8,7 +8,6 @@ import {
   type Format,
   STATUS_LABELS,
   type Status,
-  type WordCountSource,
 } from '../../data/models';
 import { LocationPicker } from '../locations/LocationPicker';
 import type { ResolvedShelf } from '../locations/util';
@@ -170,31 +169,6 @@ export function BookForm({
           </Field>
           <Field label="Body pages" hint="Excluding front and back matter">
             <input inputMode="numeric" value={book.bodyPages ?? ''} onInput={(e) => set('bodyPages', num(e.currentTarget.value))} />
-          </Field>
-        </div>
-        <div class="row-2">
-          <Field label="Word count">
-            <input
-              inputMode="numeric"
-              value={book.wordCount?.value ?? ''}
-              onInput={(e) => {
-                const v = num(e.currentTarget.value);
-                set('wordCount', v === null ? null : { value: v, source: book.wordCount?.source ?? 'looked-up' });
-              }}
-            />
-          </Field>
-          <Field label="Word count source">
-            <select
-              value={book.wordCount?.source ?? 'looked-up'}
-              disabled={!book.wordCount}
-              onChange={(e) =>
-                book.wordCount && set('wordCount', { ...book.wordCount, source: e.currentTarget.value as WordCountSource })
-              }
-            >
-              <option value="looked-up">Looked up</option>
-              <option value="sampled">Sampled</option>
-              <option value="estimated">Estimated</option>
-            </select>
           </Field>
         </div>
         <Field label="Tags" hint="Separate with commas">

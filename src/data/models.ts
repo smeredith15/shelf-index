@@ -69,6 +69,8 @@ export interface Shelf extends Syncable {
 export interface SyncedSettings extends Syncable {
   defaultWordsPerPage: number;
   upNextShelfId: string | null;
+  /** Move a book to the Up Next shelf when it joins the queue. */
+  upNextAutoMove: boolean;
 }
 
 /** Cover image bytes, kept locally and pushed to covers/<bookId>.jpg. */
