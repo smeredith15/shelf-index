@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'preact/hooks';
 import { navigate } from '../../app/router';
-import { Empty } from '../../app/ui';
+import { ActionBar, Empty } from '../../app/ui';
 import { db } from '../../data/db';
 import { useLive } from '../../data/hooks';
 import { saveBookKeepingQueue } from '../../data/reading';
@@ -18,6 +18,7 @@ export function BookDetail({ id }: { id: string }) {
   const locs = useLive(loadLocations);
   const resolved = useMemo(() => (locs ? resolveShelves(locs) : new Map()), [locs]);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const calibration = useCalibration();
 
   if (book === undefined || !locs || !calibration) return <div class="page" />;
@@ -35,11 +36,14 @@ export function BookDetail({ id }: { id: string }) {
 
   return (
     <div class="page">
-      <p>
+      <ActionBar>
         <a href="#/" onClick={(e) => history.length > 1 && (e.preventDefault(), history.back())}>
           ‹ Library
         </a>
-      </p>
+        <button type="submit" form="book-form" class="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </ActionBar>
       <h1 class="book-title">
         {book.title}
         {book.authors.length > 0 && <span class="muted"> · {book.authors.join(', ')}</span>}
@@ -52,9 +56,14 @@ export function BookDetail({ id }: { id: string }) {
         key={book.updatedAt}
         initial={book}
         resolved={resolved}
-        submitLabel="Save"
+        formId="book-form"
         onSubmit={async (b) => {
-          await saveBookKeepingQueue(book, b);
+          setSaving(true);
+          try {
+            await saveBookKeepingQueue(book, b);
+          } finally {
+            setSaving(false);
+          }
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
         }}

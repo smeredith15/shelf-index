@@ -58,6 +58,7 @@ Locations follow a fixed hierarchy: **room → bookcase → shelf → row (front
 - The physical Up Next shelf is an ordinary location. Optionally, adding a book to the queue moves its location there automatically.
 
 ### Reading sessions
+- A **Now reading** row at the top of the home screen, above Up Next, shows each book in progress with its page, progress bar, day count and whether it's paused.
 - Start, finish, pause, resume or DNF a book.
 - Optional progress updates ("page 212 on Oct 23") make pace calculations more accurate.
 - Paused time is excluded from pace.
