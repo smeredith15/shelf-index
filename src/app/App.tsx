@@ -5,15 +5,18 @@ import { Library } from '../features/library/Library';
 import { Labels } from '../features/locations/Labels';
 import { ShelfView } from '../features/locations/ShelfView';
 import { Shelves } from '../features/locations/Shelves';
+import { PickPage } from '../features/picker/PickPage';
 import { QueuePage } from '../features/queue/QueuePage';
+import { StatsPage } from '../features/stats/StatsPage';
 import { Settings } from '../features/settings/Settings';
 import { useRoute } from './router';
 import { SyncIndicator } from './SyncIndicator';
 
 const NAV = [
-  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book', 'queue'] },
+  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book', 'queue', 'pick'] },
   { href: '#/add', label: 'Add', icon: '＋', match: ['add'] },
   { href: '#/shelves', label: 'Shelves', icon: '🗄', match: ['shelves', 'shelf', 'shelve', 'labels'] },
+  { href: '#/stats', label: 'Stats', icon: '📊', match: ['stats'] },
   { href: '#/settings', label: 'Settings', icon: '⚙', match: ['settings'] },
 ];
 
@@ -28,6 +31,12 @@ export function App() {
       break;
     case 'book':
       page = <BookDetail id={arg} key={arg} />;
+      break;
+    case 'stats':
+      page = <StatsPage />;
+      break;
+    case 'pick':
+      page = <PickPage />;
       break;
     case 'queue':
       page = <QueuePage />;

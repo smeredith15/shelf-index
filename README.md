@@ -143,7 +143,7 @@ public repo: shelf-index             repo: shelf-index-data
 - Dexie for IndexedDB
 - `vite-plugin-pwa` (Workbox) for the service worker and manifest
 - Barcode scanning: the native `BarcodeDetector` where it exists (Chrome on Android), with a ZXing WebAssembly fallback on iPad
-- Chart.js for stats
+- Stats charts drawn as small SVG components (no chart library), following one validated colour palette
 - A QR generator library for shelf labels
 
 ### Project layout (planned)
@@ -298,8 +298,8 @@ The GitHub Actions workflow runs the tests on every push and keeps the old addre
 - [x] Up Next gallery
 
 **Phase 3: Insight**
-- [ ] Stats for Read and To Read, with a date-range picker
-- [ ] Pick-next helper
+- [x] Stats for Read and To Read, with a date-range picker
+- [x] Pick-next helper
 
 **Phase 4: Getting books in**
 - [ ] Android share target
