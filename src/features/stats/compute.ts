@@ -1,4 +1,4 @@
-import type { Book, Category, Session } from '../../data/models';
+import { type Book, type Category, type Session, collectionOf } from '../../data/models';
 import { addDays, dateOf, daysBetween, eachDay, monthOf } from '../reading/dates';
 import { type Calibration, type EffectiveWordCount, effectiveWordCount, readingDays } from '../reading/logic';
 import { dailyFractions } from './allocate';
@@ -282,7 +282,9 @@ export interface ToReadStats {
   unknownLength: number;
   wordsBySource: Record<WordSource, number>;
   owned: number;
-  notOwned: number;
+  borrowed: number;
+  /** Wishlist books waiting to be read, not counted in the shelf totals. */
+  wishlist: number;
   pace: number;
   /** Days to read everything at the recent pace, or null with no recent reading. */
   daysToClear: number | null;
@@ -300,7 +302,8 @@ const WAIT_BUCKETS: { label: string; maxDays: number }[] = [
 ];
 
 export function toReadStats(ctx: Context): ToReadStats {
-  const shelf = ctx.books.filter((b) => !b.deleted && b.status === 'to-read');
+  const unread = ctx.books.filter((b) => !b.deleted && b.status === 'to-read');
+  const shelf = unread.filter((b) => collectionOf(b) !== 'wishlist');
   const pace = recentPace(ctx, 90);
   const wordsBySource: Record<WordSource, number> = { counted: 0, audiobook: 0, estimated: 0 };
   let words = 0;
@@ -325,13 +328,14 @@ export function toReadStats(ctx: Context): ToReadStats {
     words,
     unknownLength,
     wordsBySource,
-    owned: shelf.filter((b) => b.owned).length,
-    notOwned: shelf.filter((b) => !b.owned).length,
+    owned: shelf.filter((b) => collectionOf(b) === 'owned').length,
+    borrowed: shelf.filter((b) => collectionOf(b) === 'borrowed').length,
+    wishlist: unread.length - shelf.length,
     pace,
     daysToClear: pace > 0 ? words / pace : null,
     waiting,
     oldestOwned: shelf
-      .filter((b) => b.owned)
+      .filter((b) => collectionOf(b) === 'owned')
       .map((book) => ({ book, days: waitDays(book) }))
       .sort((a, b) => b.days - a.days)
       .slice(0, 10),

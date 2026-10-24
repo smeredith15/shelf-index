@@ -1,4 +1,4 @@
-import type { Book, Category, Session } from '../../data/models';
+import { type Book, type Category, type Session, collectionOf } from '../../data/models';
 import { dateOf, daysBetween } from '../reading/dates';
 import { type Calibration, effectiveWordCount } from '../reading/logic';
 import type { ResolvedShelf } from '../locations/util';
@@ -52,7 +52,9 @@ export function candidates(
     if (b.deleted || b.status !== 'to-read') return false;
     if (filters.source === 'queue' && !b.queue.inQueue) return false;
     if (category && b.category !== category) return false;
-    if (filters.ownedOnly && !b.owned) return false;
+    // Picks come from books you have; wishlist books aren't on the shelf.
+    if (collectionOf(b) === 'wishlist') return false;
+    if (filters.ownedOnly && collectionOf(b) !== 'owned') return false;
     if (filters.roomId) {
       const loc = b.location && shelves.get(b.location.shelfId);
       if (!loc || loc.room.id !== filters.roomId) return false;

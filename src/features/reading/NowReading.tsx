@@ -1,15 +1,18 @@
 import { Cover } from '../../app/ui';
-import { useLive } from '../../data/hooks';
-import type { Book } from '../../data/models';
-import { liveSessions } from '../../data/reading';
+import type { Book, Session } from '../../data/models';
 import type { ResolvedShelf } from '../locations/util';
 import { currentPage, isPaused, readingDays } from './logic';
 
 /** Books being read, for the top of the home screen: progress, day count and paused state. */
-export function NowReading({ books, resolved }: { books: Book[]; resolved: Map<string, ResolvedShelf> }) {
-  const sessions = useLive(liveSessions);
-  if (!sessions) return null;
-
+export function NowReading({
+  books,
+  sessions,
+  resolved,
+}: {
+  books: Book[];
+  sessions: Session[];
+  resolved: Map<string, ResolvedShelf>;
+}) {
   const open = new Map(sessions.filter((s) => s.end === null).map((s) => [s.bookId, s]));
   // A book counts if it has an open read, or is marked Reading by hand without one.
   const reading = books

@@ -3,11 +3,16 @@ import { useEffect } from 'preact/hooks';
 import type { Book } from '../data/models';
 import { useCoverSrc } from '../data/covers';
 import type { ResolvedShelf } from '../features/locations/util';
+import { useReaders } from './readers';
 
 export function Badge({ resolved, row }: { resolved: ResolvedShelf | undefined; row?: 'front' | 'back' }) {
   if (!resolved) return null;
   return (
-    <span class={`badge${row === 'back' ? ' badge-back' : ''}`} title={`${resolved.room.name}, bookcase ${resolved.bookcase.number}, shelf ${resolved.shelf.number}${row === 'back' ? ', back row' : ''}`}>
+    <span class={`badge${row === 'back' ? ' badge-back' : ''}${resolved.room.ebook ? ' badge-ebook' : ''}`} title={
+        resolved.room.ebook
+          ? `Ebook saved in ${resolved.code}`
+          : `${resolved.room.name}, bookcase ${resolved.bookcase.number}, shelf ${resolved.shelf.number}${row === 'back' ? ', back row' : ''}`
+      }>
       {resolved.code}
       {row === 'back' && <small> back</small>}
     </span>
@@ -16,6 +21,9 @@ export function Badge({ resolved, row }: { resolved: ResolvedShelf | undefined; 
 
 export function Cover({ book, resolved, size = 'md' }: { book: Book; resolved?: ResolvedShelf; size?: 'sm' | 'md' | 'lg' }) {
   const src = useCoverSrc(book);
+  const { readByMe, partnerName } = useReaders();
+  const mine = book.status === 'read' || readByMe.has(book.id);
+  const hers = !!book.partnerRead;
   return (
     <div class={`cover cover-${size}`}>
       {src ? (
@@ -24,6 +32,12 @@ export function Cover({ book, resolved, size = 'md' }: { book: Book; resolved?: 
         <div class="cover-placeholder">
           <strong>{book.title}</strong>
           <span>{book.authors[0] ?? ''}</span>
+        </div>
+      )}
+      {(mine || hers) && (
+        <div class="cover-dots" role="img" aria-label={[mine && 'Read by me', hers && `Read by ${partnerName}`].filter(Boolean).join(', ')}>
+          {mine && <span class="dot dot-me" title="Read by me" />}
+          {hers && <span class="dot dot-partner" title={`Read by ${partnerName}`} />}
         </div>
       )}
       {resolved && book.location && (

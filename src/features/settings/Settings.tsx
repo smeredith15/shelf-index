@@ -28,6 +28,10 @@ export function Settings({ section }: { section?: string }) {
         <h2>Locations</h2>
         <LocationsEditor />
       </section>
+      <section id="readers" class="card">
+        <h2>Readers</h2>
+        <ReadersSettings />
+      </section>
       <section id="upnext" class="card">
         <h2>Up Next</h2>
         <UpNextSettings />
@@ -120,6 +124,26 @@ function SyncSettings() {
         <button class="primary">{existing ? 'Save' : 'Connect'}</button>
       </div>
     </form>
+  );
+}
+
+function ReadersSettings() {
+  const settings = useLive(loadSettings);
+  if (!settings) return null;
+  return (
+    <>
+      <p class="muted">
+        Covers show a <span class="dot-key dot-me" /> green dot for books you've read and a <span class="dot-key dot-partner" /> blue
+        dot for books the other reader has read. Mark those on a book's page, or select several in the library.
+      </p>
+      <Field label="Name for the blue dot">
+        <input
+          value={settings.partnerName}
+          placeholder="Partner"
+          onChange={(e) => saveSettings({ ...settings, partnerName: e.currentTarget.value.trim() || 'Partner' })}
+        />
+      </Field>
+    </>
   );
 }
 

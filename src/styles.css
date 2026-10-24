@@ -1586,3 +1586,97 @@ legend {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* ---------- Read dots: green for me, blue for my partner, as on the real shelves ---------- */
+
+:root {
+  --dot-me: #1f9d55;
+  --dot-partner: #2a78d6;
+}
+.cover-dots {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 3px;
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  /* A ring in the page colour keeps the dot visible on any cover. */
+  box-shadow: 0 0 0 2px #fff;
+}
+.cover-sm .dot {
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+.cover-sm .cover-dots {
+  top: 3px;
+  right: 3px;
+}
+.dot-me,
+.dot-key.dot-me {
+  background: var(--dot-me);
+}
+.dot-partner,
+.dot-key.dot-partner {
+  background: var(--dot-partner);
+}
+.dot-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+.partner-field {
+  justify-content: center;
+}
+
+/* ---------- Ebooks ---------- */
+
+.badge-ebook {
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.ebook-places {
+  max-width: 360px;
+}
+.ebook-room-title {
+  flex: 1;
+}
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.shelf-edit-list li input {
+  width: auto;
+  flex: 1;
+  min-height: 36px;
+}
+
+/* ---------- Discover ---------- */
+
+.wishlist-actions {
+  display: flex;
+  gap: 6px;
+  padding-left: 8px;
+}
+.discover-later ul {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+@media (max-width: 420px) {
+  .tabbar a {
+    font-size: 0.7rem;
+  }
+}
+.discover-later {
+  margin-top: 20px;
+}

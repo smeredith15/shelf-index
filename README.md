@@ -26,10 +26,12 @@ Existing book apps cover the basics, but none do these three things well (or for
 - Every field can be edited after import
 
 ### Library
-- **Status:** To Read, Reading, Read or DNF
-- **Ownership:** Owned or Not owned. Wishlist books can sit on To Read without a location.
+- **Status:** Owned (the default), Borrowed or Wishlist. Wishlist books live in the Discover tab, not the library.
+- **Reading:** To Read, Reading, Read or DNF, in its own dropdown. It updates itself when you start, finish, DNF or add a past read.
+- **Read dots:** a green dot in the cover's top corner for books you've read, and a blue dot for books the other reader has read, matching the dots on the real shelves. Mark the blue dot on a book's page or for several selected books at once; its name is set in Settings → Readers.
 - **Sort:** title, author, date added, date read, length, rating, location
-- **Filter:** status, fiction/nonfiction, room, bookcase, shelf, tags, series, ownership
+- **Filter:** reading status, fiction/nonfiction, owned or borrowed, read by the other reader, room, bookcase, shelf, tags, series
+- Opening a book and coming back returns to the same place in the list with the same filters
 - Ratings, notes, tags, and series with series number
 - Rereads: each read is its own session with its own dates
 - Search across title, author, ISBN and tags; results show the location badge
@@ -41,6 +43,7 @@ Locations follow a fixed hierarchy: **room → bookcase → shelf → row (front
   - Bookcases are numbered left to right from the room's entrance.
   - Shelves are numbered top to bottom.
   - Back-row books get an outlined badge with a "back" marker.
+- **Ebooks:** Ebooks appears as a room. Its second dropdown is where the ebook is saved (Kindle, Libby, Apple Books…), with no shelf or row, and the badge shows that name. Choosing an ebook place sets the format to Ebook. Ebook places don't get printed labels.
 - **Printable shelf labels:** each label has the code in large text and a QR code that links to that shelf in the app.
 - **Shelving mode:**
   1. Scan a shelf label. That shelf becomes the active shelf.
@@ -105,11 +108,14 @@ Each book stores a word count along with how it was obtained:
 - **Head-to-head:** shows two books at a time, you pick one, and it continues until one is left
 
 ### Getting books in from elsewhere
-- **Android share sheet:** share a book from Goodreads or StoryGraph to Shelf Index. The app pulls the title from the shared link or text, searches for it, and adds it to To Read as Not owned once you confirm.
+- **Android share sheet:** share a book from Goodreads or StoryGraph to Shelf Index. The app pulls the title from the shared link or text, searches for it, and adds it to the Wishlist in Discover once you confirm.
 - **Paste a link (iPad):** Add → From link does the same thing.
 - **CSV import:** import the library exports from Goodreads and StoryGraph. This brings in your to-read list and your read history with dates, so stats cover past years. Imported books start with estimated word counts.
 
-### Discovery (later, best effort)
+### Discover
+A tab for books you don't have yet: the **Wishlist** (with Got it and Borrowed buttons to move a book into the library), and later **recommendations**. Books shared in from Goodreads or StoryGraph land in the Wishlist.
+
+Recommendations (later, best effort):
 - More by this author, other books in the same series, browsing by subject (Open Library)
 - NYT bestseller lists (needs a free API key)
 - Possibly Hardcover's public API
@@ -192,6 +198,8 @@ public/
   "tags": [],
   "status": "to-read",
   "owned": true,
+  "collection": "owned",
+  "partnerRead": false,
   "location": { "shelfId": "s_lr_2_3", "row": "back" },
   "queue": { "inQueue": true, "position": 4 },
   "wordCount": { "value": 98000, "source": "sampled" },
@@ -220,7 +228,7 @@ public/
 }
 ```
 
-`data/locations.json` holds rooms (`{ id, name, code }`), bookcases (`{ id, roomId, number, name }`) and shelves (`{ id, bookcaseId, number, hasBackRow }`).
+`data/locations.json` holds rooms (`{ id, name, code, ebook? }`; the Ebooks room has `ebook: true`), bookcases (`{ id, roomId, number, name }`) and shelves (`{ id, bookcaseId, number, hasBackRow }`).
 
 ---
 

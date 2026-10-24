@@ -15,7 +15,8 @@ function qrSvg(text: string): string {
 /** Printable shelf labels: big badge code plus a QR code that opens (or, in shelving mode, selects) the shelf. */
 export function Labels() {
   const locs = useLive(loadLocations);
-  const resolved = useMemo(() => (locs ? [...resolveShelves(locs).values()] : []), [locs]);
+  // Ebook places have no physical shelf to label.
+  const resolved = useMemo(() => (locs ? [...resolveShelves(locs).values()].filter((r) => !r.room.ebook) : []), [locs]);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
 
   if (!locs) return <div class="page" />;

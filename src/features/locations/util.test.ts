@@ -19,7 +19,8 @@ const shelves: Shelf[] = [
 
 describe('locations', () => {
   it('builds badge codes as room·bookcase·shelf', () => {
-    expect(badgeCode({ code: 'LR' }, { number: 2 }, { number: 3 })).toBe('LR·2·3');
+    expect(badgeCode({ code: 'LR' }, { number: 2, name: '' }, { number: 3 })).toBe('LR·2·3');
+    expect(badgeCode({ code: 'EB', ebook: true }, { number: 1, name: 'Kindle' }, { number: 1 })).toBe('Kindle');
   });
 
   it('resolves shelves, skipping orphans, sorted by room name', () => {
