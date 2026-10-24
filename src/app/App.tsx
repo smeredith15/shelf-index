@@ -9,6 +9,7 @@ import { DiscoverPage } from '../features/discover/DiscoverPage';
 import { PickPage } from '../features/picker/PickPage';
 import { QueuePage } from '../features/queue/QueuePage';
 import { StatsPage } from '../features/stats/StatsPage';
+import { UndatedPage } from '../features/reading/UndatedPage';
 import { Settings } from '../features/settings/Settings';
 import { ReadersProvider } from './readers';
 import { useRoute } from './router';
@@ -19,7 +20,7 @@ const NAV = [
   { href: '#/add', label: 'Add', icon: '＋', match: ['add'] },
   { href: '#/shelves', label: 'Shelves', icon: '🗄', match: ['shelves', 'shelf', 'shelve', 'labels'] },
   { href: '#/discover', label: 'Discover', icon: '✨', match: ['discover'] },
-  { href: '#/stats', label: 'Stats', icon: '📊', match: ['stats'] },
+  { href: '#/stats', label: 'Stats', icon: '📊', match: ['stats', 'undated'] },
   { href: '#/settings', label: 'Settings', icon: '⚙', match: ['settings'] },
 ];
 
@@ -40,6 +41,9 @@ export function App() {
       break;
     case 'stats':
       page = <StatsPage />;
+      break;
+    case 'undated':
+      page = <UndatedPage />;
       break;
     case 'pick':
       page = <PickPage />;

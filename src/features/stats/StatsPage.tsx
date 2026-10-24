@@ -4,6 +4,7 @@ import { useLive } from '../../data/hooks';
 import { liveSessions } from '../../data/reading';
 import { liveBooks } from '../../data/store';
 import { formatDate, monthLabel, today } from '../reading/dates';
+import { undatedReads } from '../reading/undated';
 import { useCalibration } from '../reading/useCalibration';
 import { BarList, ChartCard, ColumnChart, LineChart, SplitBar, StatTile, compact, full } from './charts';
 import { type ReadStats, type ToReadStats, type WordSource, earliestRead, readStats, toReadStats, yearEndProjection } from './compute';
@@ -84,6 +85,7 @@ export function StatsPage() {
   const read = useMemo(() => (ctx && range ? readStats(ctx, range.from, range.to, prefs.mode) : null), [ctx, range, prefs.mode]);
   const projection = useMemo(() => (ctx ? yearEndProjection(ctx) : null), [ctx]);
   const shelf = useMemo(() => (ctx ? toReadStats(ctx) : null), [ctx]);
+  const undated = useMemo(() => (books && sessions ? undatedReads(books, sessions).missing.length : 0), [books, sessions]);
 
   if (!ctx || !read || !projection || !shelf || !range) return <div class="page" />;
 
@@ -145,6 +147,14 @@ export function StatsPage() {
               </button>
             </div>
           </div>
+          {undated > 0 && (
+            <p class="notice">
+              <a href="#/undated">
+                {undated} read book{undated === 1 ? ' has' : 's have'} no dates
+              </a>
+              , so {undated === 1 ? "it's" : "they're"} left out of these stats.
+            </p>
+          )}
           <p class="tiny muted range-note">
             {formatDate(range.from)} – {formatDate(range.to)}.{' '}
             {prefs.mode === 'spread'

@@ -34,6 +34,8 @@ export interface Book extends Syncable {
   collection?: Collection;
   /** Read by the other reader in the house (a blue dot on the cover; mine is green). */
   partnerRead?: boolean;
+  /** Marked Read without dates on purpose, so it isn't flagged as missing them. */
+  datesUnknown?: boolean;
   location: { shelfId: string; row: Row } | null;
   queue: { inQueue: boolean; position: number | null };
   wordCount: { value: number; source: WordCountSource } | null;

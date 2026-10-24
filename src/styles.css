@@ -177,7 +177,8 @@ button.active {
   background: var(--accent-soft);
   border-color: var(--accent);
 }
-button.small {
+button.small,
+.button.small {
   min-height: 32px;
   padding: 0 10px;
   font-size: 0.85rem;
@@ -1679,4 +1680,8 @@ legend {
 }
 .discover-later {
   margin-top: 20px;
+}
+.undated-note {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
 }

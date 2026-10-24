@@ -13,6 +13,7 @@ import {
   startReading,
   updateSession,
 } from '../../data/reading';
+import { saveBook } from '../../data/store';
 import { formatDate, today } from './dates';
 import { currentPage, isPaused, pace, readingDays, sessionsFor } from './logic';
 
@@ -72,6 +73,30 @@ export function ReadingCard({ book, words }: { book: Book; words: number | null 
           <button onClick={() => setDialog('start')}>Started earlier…</button>
           <button onClick={() => setDialog('past')}>Add a past read</button>
         </div>
+      )}
+
+      {book.status === 'read' && !sessions.some((s) => s.outcome === 'finished' && s.end) && (
+        <p class="notice undated-note">
+          {book.datesUnknown ? (
+            <>
+              Read, dates unknown.{' '}
+              <button class="link" onClick={() => saveBook({ ...book, datesUnknown: false })}>
+                Undo
+              </button>
+            </>
+          ) : (
+            <>
+              Marked Read, but with no dates it's left out of stats.{' '}
+              <button class="link" onClick={() => setDialog('past')}>
+                Add a past read
+              </button>{' '}
+              ·{' '}
+              <button class="link" onClick={() => saveBook({ ...book, datesUnknown: true })}>
+                I don't know the dates
+              </button>
+            </>
+          )}
+        </p>
       )}
 
       {sessions.length > 0 && (
