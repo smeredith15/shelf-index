@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { navigate } from '../../app/router';
-import { Cover, Empty } from '../../app/ui';
+import { ActionBar, Cover, Empty } from '../../app/ui';
 import { db } from '../../data/db';
 import { useLive } from '../../data/hooks';
 import { type Book, blankBook } from '../../data/models';
@@ -108,6 +108,21 @@ export function AddBook({ initialMode }: { initialMode?: Mode }) {
   if (draft) {
     return (
       <div class="page">
+        <ActionBar>
+          <button
+            type="button"
+            onClick={async () => {
+              await db.covers.delete(draft.book.id);
+              setDraft(null);
+              setStatus(null);
+            }}
+          >
+            Cancel
+          </button>
+          <button type="submit" form="add-book-form" class="primary" disabled={busy}>
+            {busy ? 'Adding…' : 'Add to library'}
+          </button>
+        </ActionBar>
         <h1>Add book</h1>
         {status && <p class="notice">{status}</p>}
         <BookForm
@@ -115,15 +130,15 @@ export function AddBook({ initialMode }: { initialMode?: Mode }) {
           coverUrls={draft.candidate?.coverUrls}
           workKey={draft.candidate?.workKey}
           resolved={resolved}
-          submitLabel="Add to library"
-          onCancel={async () => {
-            await db.covers.delete(draft.book.id);
-            setDraft(null);
-            setStatus(null);
-          }}
+          formId="add-book-form"
           onSubmit={async (book) => {
-            const saved = await saveBook(book);
-            navigate(`/book/${saved.id}`);
+            setBusy(true);
+            try {
+              const saved = await saveBook(book);
+              navigate(`/book/${saved.id}`);
+            } finally {
+              setBusy(false);
+            }
           }}
         />
       </div>

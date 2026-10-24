@@ -69,3 +69,8 @@ export function Field({ label, children, hint }: { label: string; children: Comp
 export function Empty({ children }: { children: ComponentChildren }) {
   return <div class="empty">{children}</div>;
 }
+
+/** A bar pinned under the header, so Save/Add stay reachable on long forms. */
+export function ActionBar({ children }: { children: ComponentChildren }) {
+  return <div class="action-bar">{children}</div>;
+}

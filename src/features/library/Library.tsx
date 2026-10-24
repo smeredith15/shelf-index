@@ -6,6 +6,7 @@ import { liveBooks, loadLocations } from '../../data/store';
 import { resolveShelves } from '../locations/util';
 import { MoveDialog } from '../locations/MoveDialog';
 import { UpNextGallery } from '../queue/UpNextGallery';
+import { NowReading } from '../reading/NowReading';
 import { EMPTY_FILTERS, type Filters, type SortKey, filterBooks, sortBooks } from './query';
 
 const PREFS_KEY = 'shelf-index.library';
@@ -69,6 +70,7 @@ export function Library({ params }: { params: URLSearchParams }) {
 
   return (
     <div class="page">
+      <NowReading books={books} resolved={resolved} />
       {books.length > 0 && <UpNextGallery books={books} resolved={resolved} />}
       <div class="library-bar">
         <input

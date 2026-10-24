@@ -26,17 +26,16 @@ export function BookForm({
   coverUrls = [],
   workKey = null,
   resolved,
-  submitLabel,
+  formId,
   onSubmit,
-  onCancel,
 }: {
   initial: Book;
   coverUrls?: string[];
   workKey?: string | null;
   resolved?: Map<string, ResolvedShelf>;
-  submitLabel: string;
+  /** Buttons elsewhere on the page submit this form with form={formId}. */
+  formId: string;
   onSubmit: (book: Book) => Promise<void> | void;
-  onCancel?: () => void;
 }) {
   const [book, setBook] = useState<Book>(initial);
   const [authors, setAuthors] = useState(initial.authors.join(', '));
@@ -49,7 +48,7 @@ export function BookForm({
 
   const submit = async (e: Event) => {
     e.preventDefault();
-    if (!book.title.trim()) return;
+    if (busy || !book.title.trim()) return;
     setBusy(true);
     try {
       await onSubmit({
@@ -67,7 +66,7 @@ export function BookForm({
   const loc = book.location && resolved?.get(book.location.shelfId);
 
   return (
-    <form class="book-form" onSubmit={submit}>
+    <form class="book-form" id={formId} onSubmit={submit}>
       <div class="book-form-top">
         <button type="button" class="cover-button" onClick={() => setPicking(true)} title="Change cover">
           <Cover book={book} size="lg" />
@@ -196,17 +195,6 @@ export function BookForm({
           <textarea rows={4} value={book.notes} onInput={(e) => set('notes', e.currentTarget.value)} />
         </Field>
       </fieldset>
-
-      <div class="form-actions">
-        {onCancel && (
-          <button type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        )}
-        <button type="submit" class="primary" disabled={busy || !book.title.trim()}>
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-      </div>
 
       {picking && (
         <CoverPicker
