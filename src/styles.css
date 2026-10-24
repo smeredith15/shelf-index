@@ -1171,3 +1171,343 @@ legend {
   background: transparent;
   color: var(--accent);
 }
+
+/* ---------- Phase 3: stats and pick next ---------- */
+
+/* Chart colors: the reference data-viz palette, validated against these card surfaces
+   (light #ffffff, dark #26201d). Aqua is under 3:1 on light, so every chart has a table view
+   and split bars carry their values in the legend. */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --viz-grid: #ece6de;
+  --viz-axis: var(--muted);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --viz-grid: #3a312c;
+  }
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.filter-row select,
+.filter-row input[type='date'] {
+  width: auto;
+}
+.range-note {
+  margin: 0 0 14px;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.stat-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 650;
+  line-height: 1.2;
+  margin: 2px 0;
+}
+.stat-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.chart-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+.chart-card h3 {
+  margin: 0;
+}
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.chart-head p {
+  margin: 2px 0 0;
+}
+.chart-toggle {
+  margin-bottom: 6px;
+}
+.chart-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 14px;
+}
+@media (min-width: 700px) {
+  .chart-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.projection p {
+  margin: 6px 0;
+}
+
+.viz {
+  position: relative;
+  width: 100%;
+}
+.viz svg {
+  display: block;
+  overflow: visible;
+  touch-action: pan-y;
+}
+.viz svg:focus {
+  outline: none;
+}
+.viz-grid,
+.viz-baseline {
+  stroke: var(--viz-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.viz-baseline {
+  stroke: var(--border);
+}
+.viz-axis {
+  fill: var(--viz-axis);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.viz-bar {
+  fill: var(--series-1);
+}
+.viz-bar.is-hover {
+  opacity: 0.8;
+}
+.viz-hit {
+  fill: transparent;
+  outline: none;
+}
+.viz-line {
+  fill: none;
+  stroke: var(--series-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.viz-area {
+  fill: var(--series-1);
+  opacity: 0.1;
+}
+.viz-dot {
+  fill: var(--series-1);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.viz-crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.viz-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+.viz-tooltip-label {
+  opacity: 0.8;
+}
+.viz-key {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--series-1);
+}
+
+.viz-barlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.viz-barlist li {
+  display: grid;
+  grid-template-columns: minmax(80px, 38%) 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 0.85rem;
+}
+.viz-barlist-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.viz-barlist-track {
+  height: 12px;
+}
+.viz-barlist-bar {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  background: var(--series-1);
+  border-radius: 0 4px 4px 0;
+}
+.viz-barlist li:hover .viz-barlist-bar {
+  opacity: 0.8;
+}
+.viz-barlist-value {
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: right;
+}
+
+.viz-split-bar {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.viz-split-seg {
+  min-width: 3px;
+}
+.viz-split-seg:hover {
+  opacity: 0.8;
+}
+.viz-split-empty {
+  flex: 1;
+  background: var(--surface-2);
+}
+.viz-fill-1 {
+  background: var(--series-1);
+}
+.viz-fill-2 {
+  background: var(--series-2);
+}
+.viz-fill-3 {
+  background: var(--series-3);
+}
+.viz-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 0.85rem;
+}
+.viz-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.viz-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.chart-table-wrap {
+  overflow-x: auto;
+}
+.chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.chart-table th,
+.chart-table td {
+  text-align: left;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.chart-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.pace-table td:first-child {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oldest-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.oldest-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pick-actions {
+  margin: 10px 0 16px;
+}
+.pick-actions select {
+  width: auto;
+}
+.pick-result {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px;
+}
+.pick-result h2 {
+  margin: 0 0 4px;
+}
+.duel-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 480px;
+}
+.duel-choice {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px;
+  height: auto;
+  text-align: left;
+}
+.duel-choice .cover {
+  width: 100%;
+}
+.upnext-head a {
+  font-size: 0.9rem;
+}

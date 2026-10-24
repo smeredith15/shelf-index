@@ -72,6 +72,7 @@ export function UpNextGallery({ books, resolved }: { books: Book[]; resolved: Ma
             ))}
           </div>
         )}
+        <a href="#/pick">Pick next</a>
         <a href="#/queue">Edit</a>
       </div>
       {layout === 'rows' ? [row('fiction', true), row('nonfiction', true)] : row(active, false)}
