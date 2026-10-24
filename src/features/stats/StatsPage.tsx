@@ -334,7 +334,13 @@ function ToReadSection({ stats }: { stats: ToReadStats }) {
   return (
     <>
       <div class="stat-grid">
-        <StatTile label="Books to read" value={full(stats.count)} sub={`${stats.owned} owned · ${stats.notOwned} not owned`} />
+        <StatTile
+          label="Books to read"
+          value={full(stats.count)}
+          sub={[`${stats.owned} owned`, stats.borrowed && `${stats.borrowed} borrowed`, stats.wishlist && `${stats.wishlist} more on the wishlist`]
+            .filter(Boolean)
+            .join(' · ')}
+        />
         <StatTile
           label="Words to read"
           value={compact(stats.words)}

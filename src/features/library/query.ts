@@ -1,4 +1,4 @@
-import type { Book, Category, Status } from '../../data/models';
+import { type Book, type Category, type Status, collectionOf } from '../../data/models';
 import { type ResolvedShelf, locationSortKey } from '../locations/util';
 
 export type SortKey = 'title' | 'author' | 'added' | 'length' | 'rating' | 'location';
@@ -7,7 +7,8 @@ export interface Filters {
   text: string;
   status: Status | '';
   category: Category | '';
-  owned: '' | 'owned' | 'not-owned';
+  collection: '' | 'owned' | 'borrowed';
+  partnerRead: '' | 'yes' | 'no';
   roomId: string;
   bookcaseId: string;
   shelfId: string;
@@ -20,7 +21,8 @@ export const EMPTY_FILTERS: Filters = {
   text: '',
   status: '',
   category: '',
-  owned: '',
+  collection: '',
+  partnerRead: '',
   roomId: '',
   bookcaseId: '',
   shelfId: '',
@@ -57,10 +59,13 @@ export function matchesText(book: Book, text: string): boolean {
 export function filterBooks(books: Book[], f: Filters, shelves: Map<string, ResolvedShelf>): Book[] {
   return books.filter((b) => {
     if (b.deleted) return false;
+    // The library is what you have; wishlist books live in Discover.
+    if (collectionOf(b) === 'wishlist') return false;
     if (f.status && b.status !== f.status) return false;
     if (f.category && b.category !== f.category) return false;
-    if (f.owned === 'owned' && !b.owned) return false;
-    if (f.owned === 'not-owned' && b.owned) return false;
+    if (f.collection && collectionOf(b) !== f.collection) return false;
+    if (f.partnerRead === 'yes' && !b.partnerRead) return false;
+    if (f.partnerRead === 'no' && b.partnerRead) return false;
     if (f.tag && !b.tags.includes(f.tag)) return false;
     if (f.series && b.series !== f.series) return false;
     if (f.unshelved && b.location) return false;

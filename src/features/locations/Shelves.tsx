@@ -1,6 +1,7 @@
 import { useMemo } from 'preact/hooks';
 import { Empty } from '../../app/ui';
 import { useLive } from '../../data/hooks';
+import { collectionOf } from '../../data/models';
 import { liveBooks, loadLocations } from '../../data/store';
 import { badgeCode } from './util';
 
@@ -15,7 +16,7 @@ export function Shelves() {
   }, [books]);
 
   if (!locs || !books) return <div class="page" />;
-  const unshelved = books.filter((b) => !b.location && b.owned).length;
+  const unshelved = books.filter((b) => !b.location && collectionOf(b) === 'owned').length;
 
   return (
     <div class="page">
@@ -45,7 +46,26 @@ export function Shelves() {
           </a>
         </Empty>
       )}
-      {locs.rooms.map((room) => (
+      {locs.rooms.map((room) =>
+        room.ebook ? (
+          <section key={room.id} class="room">
+            <h2>Ebooks</h2>
+            <div class="bookcase ebook-places">
+              {locs.bookcases
+                .filter((bc) => bc.roomId === room.id)
+                .map((bc) => {
+                  const shelf = locs.shelves.find((s) => s.bookcaseId === bc.id);
+                  return shelf ? (
+                    <a class="shelf-row" key={bc.id} href={`#/shelf/${shelf.id}`}>
+                      <span class="badge badge-ebook">{badgeCode(room, bc, shelf)}</span>
+                      <span class="shelf-count">{counts.get(shelf.id) ?? 0}</span>
+                    </a>
+                  ) : null;
+                })}
+              {!locs.bookcases.some((bc) => bc.roomId === room.id) && <p class="muted tiny">No places added yet.</p>}
+            </div>
+          </section>
+        ) : (
         <section key={room.id} class="room">
           <h2>
             {room.name} <span class="muted">{room.code}</span>
@@ -71,7 +91,8 @@ export function Shelves() {
               ))}
           </div>
         </section>
-      ))}
+        ),
+      )}
       <p>
         <a href="#/settings/locations">Edit rooms, bookcases and shelves</a>
       </p>

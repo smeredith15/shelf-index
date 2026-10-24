@@ -5,10 +5,12 @@ import { Library } from '../features/library/Library';
 import { Labels } from '../features/locations/Labels';
 import { ShelfView } from '../features/locations/ShelfView';
 import { Shelves } from '../features/locations/Shelves';
+import { DiscoverPage } from '../features/discover/DiscoverPage';
 import { PickPage } from '../features/picker/PickPage';
 import { QueuePage } from '../features/queue/QueuePage';
 import { StatsPage } from '../features/stats/StatsPage';
 import { Settings } from '../features/settings/Settings';
+import { ReadersProvider } from './readers';
 import { useRoute } from './router';
 import { SyncIndicator } from './SyncIndicator';
 
@@ -16,6 +18,7 @@ const NAV = [
   { href: '#/', label: 'Library', icon: '📚', match: ['', 'book', 'queue', 'pick'] },
   { href: '#/add', label: 'Add', icon: '＋', match: ['add'] },
   { href: '#/shelves', label: 'Shelves', icon: '🗄', match: ['shelves', 'shelf', 'shelve', 'labels'] },
+  { href: '#/discover', label: 'Discover', icon: '✨', match: ['discover'] },
   { href: '#/stats', label: 'Stats', icon: '📊', match: ['stats'] },
   { href: '#/settings', label: 'Settings', icon: '⚙', match: ['settings'] },
 ];
@@ -32,6 +35,9 @@ export function App() {
     case 'book':
       page = <BookDetail id={arg} key={arg} />;
       break;
+    case 'discover':
+      page = <DiscoverPage />;
+      break;
     case 'stats':
       page = <StatsPage />;
       break;
@@ -42,7 +48,13 @@ export function App() {
       page = <QueuePage />;
       break;
     case 'add':
-      page = <AddBook initialMode={params.get('mode') === 'search' ? 'search' : 'scan'} />;
+      page = (
+        <AddBook
+          key={params.toString()}
+          initialMode={params.get('mode') === 'search' ? 'search' : 'scan'}
+          collection={params.get('collection') === 'wishlist' ? 'wishlist' : 'owned'}
+        />
+      );
       break;
     case 'shelves':
       page = <Shelves />;
@@ -70,6 +82,7 @@ export function App() {
   }
 
   return (
+    <ReadersProvider>
     <div class="app">
       <header class="topbar no-print">
         <a href="#/" class="brand">
@@ -89,5 +102,6 @@ export function App() {
         ))}
       </nav>
     </div>
+    </ReadersProvider>
   );
 }

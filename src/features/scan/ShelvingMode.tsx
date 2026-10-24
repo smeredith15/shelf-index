@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Badge } from '../../app/ui';
 import { useLive } from '../../data/hooks';
-import type { Row } from '../../data/models';
+import { type Row, withCollection } from '../../data/models';
 import { findBookByIsbn, loadLocations, saveBook } from '../../data/store';
 import { toIsbn13 } from '../../lookup/isbn';
 import { lookupIsbn } from '../../lookup/lookup';
@@ -59,7 +59,7 @@ export function ShelvingMode({ initialShelf }: { initialShelf: string | null }) 
         if (existing.location?.shelfId === active && existing.location.row === rowToUse) {
           push({ kind: 'ok', text: `${existing.title} is already on ${where}`, bookId: existing.id });
         } else {
-          await saveBook({ ...existing, owned: true, location: { shelfId: active, row: rowToUse } });
+          await saveBook({ ...withCollection(existing, 'owned'), location: { shelfId: active, row: rowToUse } });
           push({ kind: 'ok', text: `${existing.title} → ${where}`, bookId: existing.id });
         }
         return;
@@ -70,7 +70,7 @@ export function ShelvingMode({ initialShelf }: { initialShelf: string | null }) 
         push({ kind: 'warn', text: `No match for ${isbn}. Add it from Add → Search.` });
         return;
       }
-      const book = await addFromCandidate(hit, { owned: true, location: { shelfId: active, row: rowToUse } });
+      const book = await addFromCandidate(hit, { owned: true, collection: 'owned', location: { shelfId: active, row: rowToUse } });
       push({ kind: 'new', text: `Added ${book.title} → ${where}`, bookId: book.id });
     } finally {
       setBusy(false);

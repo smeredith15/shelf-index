@@ -1,12 +1,12 @@
 import { useLive } from '../../data/hooks';
-import type { Book } from '../../data/models';
+import { type Book, collectionOf } from '../../data/models';
 import { joinQueue, leaveQueue } from '../../data/reading';
 import { liveBooks } from '../../data/store';
 import { QUEUE_SOFT_LIMIT, queueFor } from './logic';
 
 export function QueueButton({ book }: { book: Book }) {
   const books = useLive(liveBooks);
-  if (!books || book.status === 'read' || book.status === 'reading') return null;
+  if (!books || book.status === 'read' || book.status === 'reading' || collectionOf(book) === 'wishlist') return null;
   const count = queueFor(books, book.category).length;
   const label = book.category === 'fiction' ? 'fiction' : 'nonfiction';
 

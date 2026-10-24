@@ -9,7 +9,13 @@ export interface ResolvedShelf {
   code: string;
 }
 
-export function badgeCode(room: Pick<Room, 'code'>, bookcase: Pick<Bookcase, 'number'>, shelf: Pick<Shelf, 'number'>) {
+/** LR·2·3 for a shelf; for an ebook, just where it's saved (e.g. "Kindle"). */
+export function badgeCode(
+  room: Pick<Room, 'code' | 'ebook'>,
+  bookcase: Pick<Bookcase, 'number' | 'name'>,
+  shelf: Pick<Shelf, 'number'>,
+) {
+  if (room.ebook) return bookcase.name || `${room.code}·${bookcase.number}`;
   return `${room.code}·${bookcase.number}·${shelf.number}`;
 }
 
@@ -30,6 +36,8 @@ export function resolveShelves(locs: Locations): Map<string, ResolvedShelf> {
 
 export function compareResolved(a: ResolvedShelf, b: ResolvedShelf): number {
   return (
+    // Physical rooms first, Ebooks last.
+    Number(!!a.room.ebook) - Number(!!b.room.ebook) ||
     a.room.name.localeCompare(b.room.name) ||
     a.bookcase.number - b.bookcase.number ||
     a.shelf.number - b.shelf.number

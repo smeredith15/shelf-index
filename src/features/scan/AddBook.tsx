@@ -3,7 +3,7 @@ import { navigate } from '../../app/router';
 import { ActionBar, Cover, Empty } from '../../app/ui';
 import { db } from '../../data/db';
 import { useLive } from '../../data/hooks';
-import { type Book, blankBook } from '../../data/models';
+import { type Book, type Collection, blankBook, withCollection } from '../../data/models';
 import { findBookByIsbn, loadLocations, saveBook } from '../../data/store';
 import { setCoverFromUrl } from '../../data/covers';
 import { toIsbn13 } from '../../lookup/isbn';
@@ -41,7 +41,7 @@ export async function addFromCandidate(c: BookCandidate, extra: Partial<Book> = 
   return saveBook(book);
 }
 
-export function AddBook({ initialMode }: { initialMode?: Mode }) {
+export function AddBook({ initialMode, collection = 'owned' }: { initialMode?: Mode; collection?: Collection }) {
   const [mode, setMode] = useState<Mode>(initialMode ?? 'scan');
   const [draft, setDraft] = useState<{ book: Book; candidate: BookCandidate | null } | null>(null);
   const [existing, setExisting] = useState<Book | null>(null);
@@ -53,7 +53,7 @@ export function AddBook({ initialMode }: { initialMode?: Mode }) {
   const resolved = locs ? resolveShelves(locs) : new Map();
 
   const startDraft = async (candidate: BookCandidate | null, fallback: Partial<Book> = {}) => {
-    let book = candidate ? candidateToBook(candidate) : blankBook(fallback);
+    let book = withCollection(candidate ? candidateToBook(candidate) : blankBook(fallback), collection);
     // Pre-fill the first cover so the form shows something; it can be changed before saving.
     if (candidate?.coverUrls[0]) book = await setCoverFromUrl(book, candidate.coverUrls[0]);
     setDraft({ book, candidate });
@@ -123,7 +123,7 @@ export function AddBook({ initialMode }: { initialMode?: Mode }) {
             {busy ? 'Adding…' : 'Add to library'}
           </button>
         </ActionBar>
-        <h1>Add book</h1>
+        <h1>{collection === 'wishlist' ? 'Add to wishlist' : 'Add book'}</h1>
         {status && <p class="notice">{status}</p>}
         <BookForm
           initial={draft.book}
@@ -147,7 +147,7 @@ export function AddBook({ initialMode }: { initialMode?: Mode }) {
 
   return (
     <div class="page">
-      <h1>Add book</h1>
+      <h1>{collection === 'wishlist' ? 'Add to wishlist' : 'Add book'}</h1>
       <div class="segmented wide">
         <button class={mode === 'scan' ? 'active' : ''} onClick={() => setMode('scan')}>
           Scan barcode

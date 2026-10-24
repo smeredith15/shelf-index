@@ -126,6 +126,7 @@ export function calibrate(
       'mass-market': forFormat('mass-market'),
       trade: forFormat('trade'),
       hardcover: forFormat('hardcover'),
+      ebook: forFormat('ebook'),
       other: forFormat('other'),
       unknown: overall,
     },

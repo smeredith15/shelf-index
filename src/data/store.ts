@@ -121,6 +121,37 @@ export async function addBookcase(roomId: string, shelfCount: number, hasBackRow
   return bookcase;
 }
 
+/** The Ebooks room, created on first use. Its "bookcases" are the apps or devices ebooks live in. */
+export async function ensureEbookRoom(): Promise<Room> {
+  const existing = (await db.rooms.toArray()).find((r) => r.ebook && !r.deleted);
+  if (existing) return existing;
+  const room: Room = { id: newId('rm'), name: 'Ebooks', code: 'EB', ebook: true, updatedAt: now(), deleted: false };
+  await db.rooms.put(room);
+  await markDirty();
+  return room;
+}
+
+/** Adds a place ebooks are saved (Kindle, Libby…): a bookcase with a single shelf. */
+export async function addEbookPlace(roomId: string, name: string): Promise<{ bookcase: Bookcase; shelf: Shelf }> {
+  const existing = (await db.bookcases.where('roomId').equals(roomId).toArray()).filter((b) => !b.deleted);
+  const t = now();
+  const bookcase: Bookcase = {
+    id: newId('bc'),
+    roomId,
+    number: existing.reduce((max, b) => Math.max(max, b.number), 0) + 1,
+    name,
+    updatedAt: t,
+    deleted: false,
+  };
+  const shelf: Shelf = { id: newId('s'), bookcaseId: bookcase.id, number: 1, hasBackRow: false, updatedAt: t, deleted: false };
+  await db.transaction('rw', db.bookcases, db.shelves, async () => {
+    await db.bookcases.put(bookcase);
+    await db.shelves.put(shelf);
+  });
+  await markDirty();
+  return { bookcase, shelf };
+}
+
 export async function updateBookcase(bookcase: Bookcase): Promise<void> {
   await db.bookcases.put({ ...bookcase, updatedAt: now() });
   await markDirty();
@@ -180,6 +211,7 @@ export const DEFAULT_SETTINGS: SyncedSettings = {
   upNextShelfId: null,
   upNextAutoMove: false,
   defaultWordsPerMinute: 155,
+  partnerName: 'Partner',
   updatedAt: '1970-01-01T00:00:00.000Z',
   deleted: false,
 };

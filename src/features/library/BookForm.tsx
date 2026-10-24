@@ -4,11 +4,17 @@ import { setCoverFromFile, setCoverFromUrl } from '../../data/covers';
 import {
   type Book,
   type Category,
+  COLLECTION_LABELS,
+  type Collection,
+  collectionOf,
+  withCollection,
   FORMAT_LABELS,
   type Format,
   STATUS_LABELS,
   type Status,
 } from '../../data/models';
+import { useLive } from '../../data/hooks';
+import { loadSettings } from '../../data/store';
 import { LocationPicker } from '../locations/LocationPicker';
 import type { ResolvedShelf } from '../locations/util';
 import { CoverPicker } from './CoverPicker';
@@ -43,6 +49,8 @@ export function BookForm({
   const [subjects, setSubjects] = useState(initial.subjects.join(', '));
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const settings = useLive(loadSettings);
+  const partner = settings?.partnerName || 'Partner';
 
   const set = <K extends keyof Book>(key: K, value: Book[K]) => setBook((b) => ({ ...b, [key]: value }));
 
@@ -84,6 +92,18 @@ export function BookForm({
           </Field>
           <div class="row-2">
             <Field label="Status">
+              <select
+                value={collectionOf(book)}
+                onChange={(e) => setBook((b) => withCollection(b, e.currentTarget.value as Collection))}
+              >
+                {Object.entries(COLLECTION_LABELS).map(([k, v]) => (
+                  <option value={k} key={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Reading" hint="Updates itself when you start, finish or add a read">
               <select value={book.status} onChange={(e) => set('status', e.currentTarget.value as Status)}>
                 {Object.entries(STATUS_LABELS).map(([k, v]) => (
                   <option value={k} key={k}>
@@ -92,17 +112,21 @@ export function BookForm({
                 ))}
               </select>
             </Field>
+          </div>
+          <div class="row-2">
             <Field label="Category">
               <select value={book.category} onChange={(e) => set('category', e.currentTarget.value as Category)}>
                 <option value="fiction">Fiction</option>
                 <option value="nonfiction">Nonfiction</option>
               </select>
             </Field>
+            <div class="field partner-field">
+              <label class="check">
+                <input type="checkbox" checked={!!book.partnerRead} onChange={(e) => set('partnerRead', e.currentTarget.checked)} />
+                <span class="dot-key dot-partner" /> {partner} has read it
+              </label>
+            </div>
           </div>
-          <label class="check">
-            <input type="checkbox" checked={book.owned} onChange={(e) => set('owned', e.currentTarget.checked)} />
-            Owned
-          </label>
         </div>
       </div>
 
@@ -110,7 +134,17 @@ export function BookForm({
         <legend>
           Location {loc && <Badge resolved={loc} row={book.location?.row} />}
         </legend>
-        <LocationPicker value={book.location} onChange={(l) => set('location', l)} />
+        <LocationPicker
+          value={book.location}
+          onChange={(l) =>
+            setBook((b) => {
+              if (!l) return { ...b, location: null };
+              const { ebook, ...location } = l;
+              // Saving it somewhere digital makes it an ebook.
+              return { ...b, location, format: ebook ? 'ebook' : b.format };
+            })
+          }
+        />
         {book.location && (
           <button type="button" class="link" onClick={() => set('location', null)}>
             Clear location

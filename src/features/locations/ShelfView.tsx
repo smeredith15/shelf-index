@@ -80,15 +80,23 @@ export function ShelfView({ id }: { id: string }) {
         <h1>
           <span class="badge badge-lg">{here.code}</span>
         </h1>
-        <div class="actions">
-          <a class="button" href={`#/shelve?shelf=${id}`}>
-            Shelve books here
-          </a>
-        </div>
+        {!here.room.ebook && (
+          <div class="actions">
+            <a class="button" href={`#/shelve?shelf=${id}`}>
+              Shelve books here
+            </a>
+          </div>
+        )}
       </div>
       <p class="muted">
-        {here.room.name}, bookcase {here.bookcase.number}
-        {here.bookcase.name && ` (${here.bookcase.name})`}, shelf {here.shelf.number} from the top
+        {here.room.ebook ? (
+          <>Ebooks saved in {here.bookcase.name || `place ${here.bookcase.number}`}</>
+        ) : (
+          <>
+            {here.room.name}, bookcase {here.bookcase.number}
+            {here.bookcase.name && ` (${here.bookcase.name})`}, shelf {here.shelf.number} from the top
+          </>
+        )}
       </p>
 
       {rowList(here.shelf.hasBackRow ? 'Front row' : 'Books', front)}

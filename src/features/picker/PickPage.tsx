@@ -2,7 +2,7 @@ import { useMemo, useState } from 'preact/hooks';
 import { navigate } from '../../app/router';
 import { Badge, Cover, Empty } from '../../app/ui';
 import { useLive } from '../../data/hooks';
-import type { Book } from '../../data/models';
+import { type Book, collectionOf } from '../../data/models';
 import { joinQueue, liveSessions, startReading } from '../../data/reading';
 import { liveBooks, loadLocations } from '../../data/store';
 import { type ResolvedShelf, resolveShelves } from '../locations/util';
@@ -109,7 +109,7 @@ export function PickPage() {
         )}
         <label class="check">
           <input type="checkbox" checked={filters.ownedOnly} onChange={(e) => setFilters({ ownedOnly: e.currentTarget.checked })} />
-          Owned only
+          Owned only (skip borrowed)
         </label>
       </div>
       <p class="tiny muted">
@@ -221,7 +221,7 @@ function PickResult({
           {book.category === 'fiction' ? 'Fiction' : 'Nonfiction'}
           {words && ` · ${compact(words.value)} words${words.source === 'estimated' ? ' (est.)' : ''}`} · waiting{' '}
           {duration(daysWaiting(book, now))}
-          {!book.owned && ' · not owned'}
+          {collectionOf(book) === 'borrowed' && ' · borrowed'}
         </p>
         {loc && (
           <p>

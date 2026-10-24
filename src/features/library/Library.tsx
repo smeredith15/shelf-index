@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Badge, Cover, Empty } from '../../app/ui';
 import { useLive } from '../../data/hooks';
-import { STATUS_LABELS, type Status } from '../../data/models';
-import { liveBooks, loadLocations } from '../../data/store';
+import { COLLECTION_LABELS, STATUS_LABELS, type Status, collectionOf } from '../../data/models';
+import { liveSessions } from '../../data/reading';
+import { liveBooks, loadLocations, loadSettings, saveBooks } from '../../data/store';
 import { resolveShelves } from '../locations/util';
 import { MoveDialog } from '../locations/MoveDialog';
 import { UpNextGallery } from '../queue/UpNextGallery';
@@ -24,17 +25,59 @@ function loadPrefs(): Prefs {
   }
 }
 
+/**
+ * Filters and scroll position survive opening a book and coming back. Kept for the session only:
+ * a fresh launch starts at the top with no filters.
+ */
+const VIEW_KEY = 'shelf-index.library-view';
+
+interface ViewState {
+  filters: Filters;
+  showFilters: boolean;
+  scrollY: number;
+}
+
+function loadView(): ViewState | null {
+  try {
+    const raw = sessionStorage.getItem(VIEW_KEY);
+    return raw ? (JSON.parse(raw) as ViewState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveView(patch: Partial<ViewState>) {
+  try {
+    const current = loadView() ?? { filters: EMPTY_FILTERS, showFilters: false, scrollY: 0 };
+    sessionStorage.setItem(VIEW_KEY, JSON.stringify({ ...current, ...patch }));
+  } catch {
+    /* convenience only */
+  }
+}
+
+const isLibraryRoute = () => /^#?\/?(\?.*)?$/.test(location.hash);
+
 export function Library({ params }: { params: URLSearchParams }) {
   const books = useLive(liveBooks);
   const locs = useLive(loadLocations);
   const [prefs, setPrefsState] = useState<Prefs>(loadPrefs);
-  const [filters, setFilters] = useState<Filters>({
-    ...EMPTY_FILTERS,
-    unshelved: params.get('unshelved') === '1',
-    tag: params.get('tag') ?? '',
-    series: params.get('series') ?? '',
-  });
-  const [showFilters, setShowFilters] = useState(filters.unshelved || !!filters.tag || !!filters.series);
+  const settings = useLive(loadSettings);
+  const sessions = useLive(liveSessions);
+  // A link with filters in it (e.g. "books with no location") starts fresh; otherwise pick up where you left off.
+  const linked = params.has('unshelved') || params.has('tag') || params.has('series');
+  const [view] = useState(() => (linked ? null : loadView()));
+  const [filters, setFilters] = useState<Filters>(() =>
+    view
+      ? { ...EMPTY_FILTERS, ...view.filters }
+      : {
+          ...EMPTY_FILTERS,
+          unshelved: params.get('unshelved') === '1',
+          tag: params.get('tag') ?? '',
+          series: params.get('series') ?? '',
+        },
+  );
+  const [showFilters, setShowFilters] = useState(view ? view.showFilters : linked);
+  const restored = useRef(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [moving, setMoving] = useState(false);
@@ -45,6 +88,16 @@ export function Library({ params }: { params: URLSearchParams }) {
     localStorage.setItem(PREFS_KEY, JSON.stringify(next));
   };
   const setFilter = <K extends keyof Filters>(k: K, v: Filters[K]) => setFilters((f) => ({ ...f, [k]: v }));
+
+  useEffect(() => saveView({ filters, showFilters }), [filters, showFilters]);
+  useEffect(() => {
+    const onScroll = () => {
+      // The router scrolls to the top after the hash has already changed; don't record that.
+      if (isLibraryRoute()) saveView({ scrollY: window.scrollY });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const resolved = useMemo(() => (locs ? resolveShelves(locs) : new Map()), [locs]);
   const shown = useMemo(
@@ -66,16 +119,26 @@ export function Library({ params }: { params: URLSearchParams }) {
       return next;
     });
 
-  if (!books || !locs) return <div class="page" />;
+  // Once the books have rendered, return to where the list was.
+  // Wait for everything the page renders, or the scroll would be clamped by a half-empty page.
+  useLayoutEffect(() => {
+    if (restored.current || !books || !locs || !settings || !sessions) return;
+    restored.current = true;
+    if (view?.scrollY) window.scrollTo(0, view.scrollY);
+  }, [books, locs, settings, sessions]);
+
+  if (!books || !locs || !settings || !sessions) return <div class="page" />;
+  const owned = books.filter((b) => collectionOf(b) !== 'wishlist');
+  const partner = settings.partnerName || 'Partner';
 
   return (
     <div class="page">
-      <NowReading books={books} resolved={resolved} />
+      <NowReading books={books} sessions={sessions} resolved={resolved} />
       {books.length > 0 && <UpNextGallery books={books} resolved={resolved} />}
       <div class="library-bar">
         <input
           type="search"
-          placeholder={`Search ${books.length} books`}
+          placeholder={`Search ${owned.length} books`}
           value={filters.text}
           onInput={(e) => setFilter('text', e.currentTarget.value)}
         />
@@ -98,7 +161,7 @@ export function Library({ params }: { params: URLSearchParams }) {
       {showFilters && (
         <div class="filters">
           <select value={filters.status} onChange={(e) => setFilter('status', e.currentTarget.value as Status | '')}>
-            <option value="">Any status</option>
+            <option value="">Any reading status</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
               <option value={k} key={k}>
                 {v}
@@ -110,10 +173,15 @@ export function Library({ params }: { params: URLSearchParams }) {
             <option value="fiction">Fiction</option>
             <option value="nonfiction">Nonfiction</option>
           </select>
-          <select value={filters.owned} onChange={(e) => setFilter('owned', e.currentTarget.value as Filters['owned'])}>
-            <option value="">Owned or not</option>
-            <option value="owned">Owned</option>
-            <option value="not-owned">Not owned</option>
+          <select value={filters.collection} onChange={(e) => setFilter('collection', e.currentTarget.value as Filters['collection'])}>
+            <option value="">Owned or borrowed</option>
+            <option value="owned">{COLLECTION_LABELS.owned}</option>
+            <option value="borrowed">{COLLECTION_LABELS.borrowed}</option>
+          </select>
+          <select value={filters.partnerRead} onChange={(e) => setFilter('partnerRead', e.currentTarget.value as Filters['partnerRead'])}>
+            <option value="">Read by {partner} or not</option>
+            <option value="yes">Read by {partner}</option>
+            <option value="no">Not read by {partner}</option>
           </select>
           <select
             value={filters.roomId}
@@ -187,7 +255,7 @@ export function Library({ params }: { params: URLSearchParams }) {
 
       <div class="library-meta">
         <span class="muted">
-          {shown.length === books.length ? `${books.length} books` : `${shown.length} of ${books.length} books`}
+          {shown.length === owned.length ? `${owned.length} books` : `${shown.length} of ${owned.length} books`}
         </span>
         {selecting ? (
           <span class="select-actions">
@@ -196,6 +264,18 @@ export function Library({ params }: { params: URLSearchParams }) {
             </button>
             <button class="primary small" disabled={selected.size === 0} onClick={() => setMoving(true)}>
               Move {selected.size || ''}
+            </button>
+            <button
+              class="small"
+              disabled={selected.size === 0}
+              title={`Mark the selected books as read by ${partner} (blue dot)`}
+              onClick={async () => {
+                await saveBooks(books.filter((b) => selected.has(b.id)).map((b) => ({ ...b, partnerRead: true })));
+                setSelecting(false);
+                setSelected(new Set());
+              }}
+            >
+              <span class="dot-key dot-partner" /> Read by {partner}
             </button>
             <button class="small" onClick={() => (setSelecting(false), setSelected(new Set()))}>
               Done
@@ -210,7 +290,7 @@ export function Library({ params }: { params: URLSearchParams }) {
         )}
       </div>
 
-      {books.length === 0 ? (
+      {owned.length === 0 ? (
         <Empty>
           <p>Your library is empty.</p>
           <a class="button primary" href="#/add">
@@ -263,7 +343,7 @@ export function Library({ params }: { params: URLSearchParams }) {
                     <div class="muted">{b.authors.join(', ')}</div>
                     <div class="tiny muted">
                       {STATUS_LABELS[b.status]}
-                      {!b.owned && ' · Not owned'}
+                      {collectionOf(b) === 'borrowed' && ' · Borrowed'}
                       {b.series && ` · ${b.series}${b.seriesIndex ? ` #${b.seriesIndex}` : ''}`}
                     </div>
                   </div>

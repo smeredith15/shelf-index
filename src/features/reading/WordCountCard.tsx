@@ -149,7 +149,8 @@ function SampleDialog({ book, onClose }: { book: Book; onClose: () => void }) {
 
 function AudioDialog({ book, onClose }: { book: Book; onClose: () => void }) {
   const [text, setText] = useState(book.audioMinutes ? formatDuration(book.audioMinutes) : '');
-  const [unabridged, setUnabridged] = useState(!!book.audioMinutes);
+  // Most audiobooks are unabridged, so start ticked; untick for an abridged edition.
+  const [unabridged, setUnabridged] = useState(true);
   const minutes = parseDuration(text);
   const valid = minutes !== null && minutes > 0 && unabridged;
   return (
