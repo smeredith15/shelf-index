@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setAppleLoader } from './apple';
 import { lookupIsbn, lookupNearbyEditions, searchBooks, setGoogleBooksKey, withProblems } from './lookup';
 
 const responses: Record<string, unknown> = {
@@ -124,5 +125,50 @@ describe('lookupNearbyEditions', () => {
     });
     const near = await lookupNearbyEditions('9781400347971');
     expect(near.map((c) => [c.title, c.isbn13])).toEqual([['The Shark House', '9781400347988']]);
+  });
+});
+
+describe('Apple Books', () => {
+  const shark = {
+    trackName: 'The Shark House: A Novel',
+    artistName: 'Sara Ackerman',
+    artworkUrl100: 'https://is1-ssl.mzstatic.com/image/thumb/abc/100x100bb.jpg',
+    releaseDate: '2026-04-07T07:00:00Z',
+    genres: ['Fiction & Literature', 'Books'],
+  };
+  afterEach(() => setAppleLoader(null));
+
+  it('finds new releases the other sources miss, by ISBN, title and neighbouring edition', async () => {
+    // Google and Open Library know nothing about this book.
+    vi.stubGlobal('fetch', async () => new Response('{}', { status: 404 }));
+    const asked: string[] = [];
+    setAppleLoader(async <T,>(url: string) => {
+      asked.push(url);
+      if (url.includes('lookup?isbn=9781400347988') || url.includes('search?term=The%20shark%20house')) {
+        return { results: [shark] } as T;
+      }
+      return { results: [] } as T;
+    });
+
+    const direct = await lookupIsbn('9781400347988');
+    expect(direct).toMatchObject({
+      title: 'The Shark House',
+      subtitle: 'A Novel',
+      authors: ['Sara Ackerman'],
+      pubYear: 2026,
+      category: 'fiction',
+      isbn13: '9781400347988',
+      source: 'apple',
+      coverUrls: ['https://is1-ssl.mzstatic.com/image/thumb/abc/600x600bb.jpg'],
+    });
+
+    const { value, sources } = await withProblems(() => searchBooks('The shark house ackerman'));
+    expect(value.map((c) => c.title)).toEqual(['The Shark House']);
+    expect(sources).toEqual({ openlibrary: null, google: null, apple: 1 });
+
+    // The printed ISBN misses everywhere, but Apple lists its neighbour.
+    expect(await lookupIsbn('9781400347971')).toBeNull();
+    const near = await lookupNearbyEditions('9781400347971');
+    expect(near.map((c) => [c.title, c.isbn13, c.source])).toEqual([['The Shark House', '9781400347988', 'apple']]);
   });
 });

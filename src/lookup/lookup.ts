@@ -1,5 +1,6 @@
 import type { Category } from '../data/models';
 import { guessCategory } from './category';
+import { appleByIsbn, appleSearch } from './apple';
 import { neighborIsbns, toIsbn13 } from './isbn';
 
 /** Book metadata from an outside source, before it becomes a library record. */
@@ -18,7 +19,7 @@ export interface BookCandidate {
   /** Open Library work key, used to find covers from other editions. */
   workKey: string | null;
   coverUrls: string[];
-  source: 'openlibrary' | 'google';
+  source: 'openlibrary' | 'google' | 'apple';
 }
 
 const OL = 'https://openlibrary.org';
@@ -43,11 +44,24 @@ export function setGoogleBooksKey(key: string | undefined): void {
   googleKey = (key ?? '').trim();
 }
 
-/** Runs a lookup and reports any problems hit along the way. */
-export async function withProblems<T>(run: () => Promise<T>): Promise<{ value: T; problems: LookupProblem[] }> {
+export type SourceName = BookCandidate['source'];
+/** Results per source in the last search, or null where the source couldn't be reached. */
+export type SourceTally = Partial<Record<SourceName, number | null>>;
+let tally: SourceTally = {};
+
+function record(source: SourceName, n: number | null): void {
+  const prev = tally[source];
+  tally[source] = n === null ? (prev ?? null) : (prev ?? 0) + n;
+}
+
+/** Runs a lookup and reports problems hit along the way, and what each source returned. */
+export async function withProblems<T>(
+  run: () => Promise<T>,
+): Promise<{ value: T; problems: LookupProblem[]; sources: SourceTally }> {
   problems = new Set();
+  tally = {};
   const value = await run();
-  return { value, problems: [...problems] };
+  return { value, problems: [...problems], sources: tally };
 }
 
 async function getJson<T>(url: string): Promise<T | null> {
@@ -156,6 +170,7 @@ function openLibrarySearch(query: string): Promise<BookCandidate[]> {
 async function openLibrarySearchQuery(params: string): Promise<BookCandidate[]> {
   const fields = 'key,title,subtitle,author_name,first_publish_year,isbn,cover_i,number_of_pages_median,subject,publisher';
   const data = await getJson<{ docs: OLSearchDoc[] }>(`${OL}/search.json?${params}&fields=${fields}&limit=20`);
+  record('openlibrary', data ? (data.docs ?? []).length : null);
   return (data?.docs ?? []).map((d) => {
     const isbn13 = d.isbn?.map((i) => toIsbn13(i)).find((i): i is string => !!i) ?? null;
     const subjects = (d.subject ?? []).slice(0, 15);
@@ -236,7 +251,9 @@ async function googleSearch(q: string): Promise<BookCandidate[]> {
   const data = await getJson<{ items?: GVolume[] }>(
     `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20&printType=books${key}`,
   );
-  return (data?.items ?? []).map(googleCandidate).filter((c): c is BookCandidate => !!c);
+  const out = (data?.items ?? []).map(googleCandidate).filter((c): c is BookCandidate => !!c);
+  record('google', data ? out.length : null);
+  return out;
 }
 
 // ---------- Public API ----------
@@ -245,11 +262,16 @@ async function googleSearch(q: string): Promise<BookCandidate[]> {
 export async function lookupIsbn(input: string): Promise<BookCandidate | null> {
   const isbn13 = toIsbn13(input);
   if (!isbn13) return null;
-  const [ol, google] = await Promise.all([openLibraryByIsbn(isbn13), googleSearch(`isbn:${isbn13}`)]);
+  const [ol, google, apple] = await Promise.all([
+    openLibraryByIsbn(isbn13),
+    googleSearch(`isbn:${isbn13}`),
+    appleByIsbn(isbn13),
+  ]);
+  record('apple', apple ? 1 : 0);
   const g = google[0] ?? null;
-  if (!ol && !g) return null;
-  if (!ol) return { ...g!, isbn13 };
-  if (!g) return ol;
+  if (!ol && !g) return apple;
+  if (!ol) return { ...g!, isbn13, coverUrls: unique([...g!.coverUrls, ...(apple?.coverUrls ?? [])]) };
+  if (!g) return { ...ol, coverUrls: unique([...ol.coverUrls, ...(apple?.coverUrls ?? [])]) };
   const subjects = ol.subjects.length ? ol.subjects : g.subjects;
   return {
     ...ol,
@@ -260,19 +282,26 @@ export async function lookupIsbn(input: string): Promise<BookCandidate | null> {
     pageCount: ol.pageCount ?? g.pageCount,
     subjects,
     category: guessCategory([...subjects, ...g.subjects]),
-    coverUrls: unique([...ol.coverUrls, ...g.coverUrls]),
+    coverUrls: unique([...ol.coverUrls, ...g.coverUrls, ...(apple?.coverUrls ?? [])]),
   };
 }
 
 /**
  * For an ISBN no source knows: books listed under neighbouring ISBNs, which are usually other
- * editions of the same book. Only Google is asked, since it carries new releases far sooner than
- * Open Library. Results keep the ISBN they were found under.
+ * editions of the same book. Google and Apple Books are asked, since they carry new releases far
+ * sooner than Open Library. Results keep the ISBN they were found under.
  */
 export async function lookupNearbyEditions(input: string, span = 3): Promise<BookCandidate[]> {
   const isbn13 = toIsbn13(input);
   if (!isbn13) return [];
-  const hits = await Promise.all(neighborIsbns(isbn13, span).map((n) => googleSearch(`isbn:${n}`).then((r) => r[0] ?? null)));
+  const hits = (
+    await Promise.all(
+      neighborIsbns(isbn13, span).map((n) =>
+        Promise.all([googleSearch(`isbn:${n}`).then((r) => r[0] ?? null), appleByIsbn(n)]),
+      ),
+    )
+  ).flat();
+  record('apple', hits.filter((h) => h?.source === 'apple').length);
   const seen = new Set<string>();
   return hits.filter((h): h is BookCandidate => {
     if (!h) return false;
@@ -292,13 +321,12 @@ export async function searchBooks(query: string): Promise<BookCandidate[]> {
     const hit = await lookupIsbn(isbn);
     return hit ? [hit] : [];
   }
-  const [ol, google] = await Promise.all([openLibrarySearch(q), googleSearch(q)]);
-  // Interleave so both sources show up near the top.
+  const [ol, google, apple] = await Promise.all([openLibrarySearch(q), googleSearch(q), appleSearch(q)]);
+  record('apple', apple ? apple.length : null);
+  // Interleave so every source shows up near the top.
+  const lists = [ol, google, apple ?? []];
   const out: BookCandidate[] = [];
-  for (let i = 0; i < Math.max(ol.length, google.length); i++) {
-    if (ol[i]) out.push(ol[i]);
-    if (google[i]) out.push(google[i]);
-  }
+  for (let i = 0; i < Math.max(...lists.map((l) => l.length)); i++) for (const l of lists) if (l[i]) out.push(l[i]);
   return out;
 }
 

@@ -21,10 +21,11 @@ Existing book apps cover the basics, but none do these three things well (or for
 ### Adding books
 - Scan the ISBN barcode with the camera
 - Search by ISBN, title or author when there's no barcode or a scan fails
-- Metadata from Open Library and Google Books: title, authors, page count, publisher, publication year, subjects, series where available
+- Metadata from Open Library, Google Books and Apple Books: title, authors, page count, publisher, publication year, subjects, series where available
 - Choose a cover from the available editions, or photograph your own copy
 - Every field can be edited after import
 - **When an ISBN isn't found** (common for brand-new books, which sources often list under a different edition's ISBN), the app checks the ISBNs either side of it, since publishers usually number a book's editions consecutively, and offers any match as "tap yours". If nothing nearby matches, it switches to title search. Either way the book is saved with the ISBN you scanned, so scanning it later finds it.
+- **Apple Books** (the public iTunes Search API, no key) usually lists new releases as ebooks on day one, often before Google's API returns them, so it's searched alongside the others, including for nearby editions. It's called via JSONP because the API doesn't allow cross-site requests. When a search finds nothing, the app shows what each source returned.
 - **Google Books API key (optional):** without one, Google's shared anonymous quota sometimes runs out and searches miss books. The app says when that happens; Settings → Book lookups explains how to add a free key.
 
 ### Library

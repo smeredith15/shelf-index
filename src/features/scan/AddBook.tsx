@@ -10,6 +10,8 @@ import { toIsbn13 } from '../../lookup/isbn';
 import {
   type BookCandidate,
   type LookupProblem,
+  type SourceName,
+  type SourceTally,
   lookupIsbn,
   lookupNearbyEditions,
   searchBooks,
@@ -48,6 +50,16 @@ export async function addFromCandidate(c: BookCandidate, extra: Partial<Book> = 
   return saveBook(book);
 }
 
+const SOURCE_LABELS: Record<SourceName, string> = { openlibrary: 'Open Library', google: 'Google Books', apple: 'Apple Books' };
+
+/** "Open Library 0 · Google Books 0 · Apple Books didn't respond", so a miss shows where it missed. */
+function describeSources(sources: SourceTally): string {
+  return (Object.keys(SOURCE_LABELS) as SourceName[])
+    .filter((k) => k in sources)
+    .map((k) => `${SOURCE_LABELS[k]} ${sources[k] === null ? "didn't respond" : sources[k]}`)
+    .join(' · ');
+}
+
 /** Plain-language reasons a lookup came back empty, beyond "not found". */
 export function describeProblems(problems: LookupProblem[]): string | null {
   if (problems.includes('google-key')) return 'Google Books rejected the API key in Settings → Book lookups.';
@@ -72,6 +84,7 @@ export function AddBook({
   // even if the match found by title lists a different edition's ISBN.
   const [pendingIsbn, setPendingIsbn] = useState<string | null>(initialIsbn);
   const [problem, setProblem] = useState<string | null>(null);
+  const [searched, setSearched] = useState<string | null>(null);
   /** Set when the results shown are books found under ISBNs neighbouring a missed one. */
   const [nearbyFor, setNearbyFor] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ book: Book; candidate: BookCandidate | null } | null>(null);
@@ -143,9 +156,10 @@ export function AddBook({
       setBusy(false);
       return handleIsbn(isbn);
     }
-    const { value, problems } = await withProblems(() => searchBooks(query));
+    const { value, problems, sources } = await withProblems(() => searchBooks(query));
     setNearbyFor(null);
     setResults(value);
+    setSearched(describeSources(sources));
     setProblem(describeProblems(problems));
     setBusy(false);
   };
@@ -277,7 +291,12 @@ export function AddBook({
             </button>
           </form>
           {busy && <p class="muted">Searching…</p>}
-          {results && results.length === 0 && <Empty>No matches. Try fewer words, or add it by hand.</Empty>}
+          {results && results.length === 0 && (
+            <Empty>
+              No matches. Try fewer words, or add it by hand.
+              {searched && <div class="tiny">Searched {searched}.</div>}
+            </Empty>
+          )}
           {results && results.length > 0 && (
             <ul class="results">
               {results.map((c, i) => (
@@ -292,7 +311,7 @@ export function AddBook({
                         {c.pubYear ? ` · ${c.pubYear}` : ''}
                         {c.pageCount ? ` · ${c.pageCount} pp` : ''}
                       </div>
-                      <div class="tiny muted">{c.source === 'google' ? 'Google Books' : 'Open Library'}</div>
+                      <div class="tiny muted">{SOURCE_LABELS[c.source]}</div>
                     </div>
                   </button>
                 </li>
