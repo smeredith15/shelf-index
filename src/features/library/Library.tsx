@@ -164,7 +164,7 @@ export function Library({ params }: { params: URLSearchParams }) {
             <option value="">Any reading status</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
               <option value={k} key={k}>
-                {v}
+                {v || 'No reading status'}
               </option>
             ))}
           </select>
@@ -277,6 +277,27 @@ export function Library({ params }: { params: URLSearchParams }) {
             >
               <span class="dot-key dot-partner" /> Read by {partner}
             </button>
+            <select
+              class="small-select"
+              value=""
+              disabled={selected.size === 0}
+              aria-label="Set reading status for the selected books"
+              onChange={async (e) => {
+                const status = e.currentTarget.value as Status;
+                await saveBooks(books.filter((b) => selected.has(b.id)).map((b) => ({ ...b, status })));
+                setSelecting(false);
+                setSelected(new Set());
+              }}
+            >
+              <option value="" disabled>
+                Reading…
+              </option>
+              {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                <option value={k} key={k}>
+                  {v || 'No reading status'}
+                </option>
+              ))}
+            </select>
             <button class="small" onClick={() => (setSelecting(false), setSelected(new Set()))}>
               Done
             </button>
@@ -342,9 +363,13 @@ export function Library({ params }: { params: URLSearchParams }) {
                     <strong>{b.title}</strong>
                     <div class="muted">{b.authors.join(', ')}</div>
                     <div class="tiny muted">
-                      {STATUS_LABELS[b.status]}
-                      {collectionOf(b) === 'borrowed' && ' · Borrowed'}
-                      {b.series && ` · ${b.series}${b.seriesIndex ? ` #${b.seriesIndex}` : ''}`}
+                      {[
+                        STATUS_LABELS[b.status],
+                        collectionOf(b) === 'borrowed' && 'Borrowed',
+                        b.series && `${b.series}${b.seriesIndex ? ` #${b.seriesIndex}` : ''}`,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </div>
                   </div>
                   <Badge resolved={loc} row={b.location?.row} />

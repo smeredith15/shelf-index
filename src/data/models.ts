@@ -1,4 +1,5 @@
-export type Status = 'to-read' | 'reading' | 'read' | 'dnf';
+/** Reading status. 'none' (shown blank) is the default: owned, no plans to read it. */
+export type Status = 'none' | 'to-read' | 'reading' | 'read' | 'dnf';
 export type Category = 'fiction' | 'nonfiction';
 export type Format = 'mass-market' | 'trade' | 'hardcover' | 'ebook' | 'other';
 /** Where a book stands in the collection. Wishlist books live in Discover, not the library. */
@@ -36,6 +37,10 @@ export interface Book extends Syncable {
   partnerRead?: boolean;
   /** Marked Read without dates on purpose, so it isn't flagged as missing them. */
   datesUnknown?: boolean;
+  /** Pinned "on the radar" (thinking of queueing it soon): when it was pinned, or null. */
+  radarAt?: string | null;
+  /** A stand-in for the next book in a series that isn't in the library yet. */
+  seriesPlaceholder?: boolean;
   location: { shelfId: string; row: Row } | null;
   queue: { inQueue: boolean; position: number | null };
   wordCount: { value: number; source: WordCountSource } | null;
@@ -102,6 +107,7 @@ export interface CoverBlob {
 }
 
 export const STATUS_LABELS: Record<Status, string> = {
+  none: '',
   'to-read': 'To Read',
   reading: 'Reading',
   read: 'Read',
@@ -159,7 +165,7 @@ export function blankBook(partial: Partial<Book> = {}): Book {
     category: 'nonfiction',
     subjects: [],
     tags: [],
-    status: 'to-read',
+    status: 'none',
     owned: true,
     collection: 'owned',
     partnerRead: false,

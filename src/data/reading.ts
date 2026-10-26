@@ -1,8 +1,9 @@
 import { db } from './db';
-import { type Book, type Session, newId, now } from './models';
+import { type Book, type Session, blankBook, newId, now } from './models';
 import { liveBooks, loadSettings, markDirty, saveBook, saveBooks } from './store';
 import { queueFor, renumber } from '../features/queue/logic';
 import { today } from '../features/reading/dates';
+import { nextInSeries } from '../features/reading/series';
 
 // ---------- Sessions ----------
 
@@ -40,8 +41,42 @@ export async function resumeReading(session: Session, date = today()): Promise<v
   await putSession({ ...session, pauses: session.pauses.map((p) => (p.to === null ? { ...p, to: date } : p)) });
 }
 
+/**
+ * After finishing a book in a series, puts the next one on To Read: the library's copy if it has
+ * no plans yet, or a placeholder to find later. Returns a note for the reader, or null.
+ */
+export async function promoteNextInSeries(finished: Book): Promise<string | null> {
+  const [books, sessions] = await Promise.all([liveBooks(), liveSessions()]);
+  const readIds = new Set(sessions.filter((s) => s.outcome === 'finished').map((s) => s.bookId));
+  const next = nextInSeries(books, finished, readIds);
+  if (!next) return null;
+  if (next.kind === 'existing') {
+    await saveBook({ ...next.book, status: 'to-read' });
+    return `Next in the series, ${next.book.title}, is now on To Read.`;
+  }
+  await saveBook(
+    blankBook({
+      title: `${next.series} #${next.index}`,
+      series: next.series,
+      seriesIndex: next.index,
+      authors: finished.authors,
+      category: finished.category,
+      status: 'to-read',
+      owned: false,
+      collection: 'wishlist',
+      seriesPlaceholder: true,
+    }),
+  );
+  return `${next.series} #${next.index} isn't in your library, so a placeholder is on To Read. Find it from Up Next.`;
+}
+
 /** Ends a session as finished or DNF and updates the book's status to match. */
-export async function endReading(book: Book, session: Session, outcome: 'finished' | 'dnf', date = today()): Promise<void> {
+export async function endReading(
+  book: Book,
+  session: Session,
+  outcome: 'finished' | 'dnf',
+  date = today(),
+): Promise<string | null> {
   await putSession({
     ...session,
     end: date,
@@ -49,6 +84,7 @@ export async function endReading(book: Book, session: Session, outcome: 'finishe
     pauses: session.pauses.map((p) => (p.to === null ? { ...p, to: date } : p)),
   });
   await leaveQueue(book, { status: outcome === 'finished' ? 'read' : 'dnf' });
+  return outcome === 'finished' ? promoteNextInSeries(book) : null;
 }
 
 export async function logProgress(session: Session, page: number, date = today()): Promise<void> {
@@ -59,7 +95,12 @@ export async function logProgress(session: Session, page: number, date = today()
 }
 
 /** Records a past read with known dates, e.g. one finished before you started using the app. */
-export async function addPastRead(book: Book, start: string, end: string, outcome: 'finished' | 'dnf'): Promise<void> {
+export async function addPastRead(
+  book: Book,
+  start: string,
+  end: string,
+  outcome: 'finished' | 'dnf',
+): Promise<string | null> {
   await putSession({
     id: newId('r'),
     bookId: book.id,
@@ -74,6 +115,7 @@ export async function addPastRead(book: Book, start: string, end: string, outcom
   // Only change the status if this book isn't currently being read.
   const open = (await db.sessions.where('bookId').equals(book.id).toArray()).some((s) => !s.deleted && s.end === null);
   if (!open) await leaveQueue(book, { status: outcome === 'finished' ? 'read' : 'dnf' });
+  return outcome === 'finished' ? promoteNextInSeries(book) : null;
 }
 
 export async function updateSession(session: Session): Promise<void> {
@@ -92,8 +134,11 @@ export async function joinQueue(book: Book): Promise<void> {
   const position = queueFor(books, book.category).length + 1;
   const shelf = settings.upNextAutoMove && settings.upNextShelfId;
   const shelfExists = shelf && (await db.shelves.get(shelf))?.deleted === false;
+  // Queueing a book means you mean to read it, and it's no longer just on the radar.
   await saveBook({
     ...book,
+    status: book.status === 'none' ? 'to-read' : book.status,
+    radarAt: null,
     queue: { inQueue: true, position },
     location: shelfExists ? { shelfId: shelf, row: 'front' } : book.location,
   });
@@ -120,6 +165,15 @@ export async function saveBookKeepingQueue(before: Book, after: Book): Promise<v
   const oldRest = queueFor(books, before.category).filter((b) => b.id !== before.id);
   const position = queueFor(books, after.category).length + 1;
   await saveBooks([{ ...after, queue: { inQueue: true, position } }, ...renumber(oldRest)]);
+}
+
+/** Pins a book "on the radar" at the top of the To Read list (making it To Read), or unpins it. */
+export async function setRadar(book: Book, on: boolean): Promise<void> {
+  await saveBook({
+    ...book,
+    radarAt: on ? now() : null,
+    status: on && book.status === 'none' ? 'to-read' : book.status,
+  });
 }
 
 export async function reorderQueue(ordered: Book[]): Promise<void> {

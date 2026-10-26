@@ -1704,3 +1704,34 @@ legend {
   font-size: 0.85em;
   word-break: break-all;
 }
+select.small-select {
+  width: auto;
+  min-height: 32px;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Up Next tab ---------- */
+
+.upnext-list li {
+  gap: 6px;
+}
+.row-actions {
+  display: flex;
+  gap: 6px;
+  padding-right: 4px;
+  flex-shrink: 0;
+}
+.icon-button {
+  padding: 0 8px;
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.icon-button.active {
+  filter: none;
+  opacity: 1;
+}
+.series-note {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+}

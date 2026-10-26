@@ -4,7 +4,7 @@ import { ActionBar, Cover, Empty } from '../../app/ui';
 import { db } from '../../data/db';
 import { useLive } from '../../data/hooks';
 import { type Book, type Collection, blankBook, withCollection } from '../../data/models';
-import { findBookByIsbn, loadLocations, saveBook } from '../../data/store';
+import { deleteBook, findBookByIsbn, loadLocations, saveBook } from '../../data/store';
 import { setCoverFromUrl } from '../../data/covers';
 import { toIsbn13 } from '../../lookup/isbn';
 import {
@@ -73,11 +73,17 @@ export function AddBook({
   initialMode,
   collection = 'owned',
   initialIsbn = null,
+  initialQuery = null,
+  replaceId = null,
 }: {
   initialMode?: Mode;
   collection?: Collection;
   /** An ISBN that lookup missed (e.g. from shelving mode); kept for whatever book gets added. */
   initialIsbn?: string | null;
+  /** Search to run straight away, e.g. for a series placeholder. */
+  initialQuery?: string | null;
+  /** A series placeholder that the added book replaces. */
+  replaceId?: string | null;
 }) {
   const [mode, setMode] = useState<Mode>(initialIsbn ? 'search' : (initialMode ?? 'scan'));
   // The ISBN printed on the copy in hand, when lookup missed it. The book is saved with this one,
@@ -90,7 +96,7 @@ export function AddBook({
   const [draft, setDraft] = useState<{ book: Book; candidate: BookCandidate | null } | null>(null);
   const [existing, setExisting] = useState<Book | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [results, setResults] = useState<BookCandidate[] | null>(null);
   const [busy, setBusy] = useState(false);
   const locs = useLive(loadLocations);
@@ -98,6 +104,11 @@ export function AddBook({
 
   const startDraft = async (candidate: BookCandidate | null, fallback: Partial<Book> = {}, isbn = pendingIsbn) => {
     let book = withCollection(candidate ? candidateToBook(candidate) : blankBook(fallback), collection);
+    // A wishlist book, or one replacing a To Read placeholder, is one you mean to read.
+    if (collection === 'wishlist' || replaceId) book = { ...book, status: 'to-read' };
+    // The placeholder knows the series and number; keep them so finishing this one queues the next.
+    const placeholder = replaceId ? await db.books.get(replaceId) : undefined;
+    if (placeholder) book = { ...book, series: book.series ?? placeholder.series, seriesIndex: book.seriesIndex ?? placeholder.seriesIndex };
     if (isbn) book = { ...book, isbn13: isbn };
     // Pre-fill the first cover so the form shows something; it can be changed before saving.
     if (candidate?.coverUrls[0]) book = await setCoverFromUrl(book, candidate.coverUrls[0]);
@@ -140,14 +151,19 @@ export function AddBook({
     setNearbyFor(near.value.length ? isbn : null);
   };
 
-  // Arriving with a missed ISBN (from shelving mode): run the same checks straight away.
+  // Arriving with a missed ISBN (from shelving mode) or a search (a series placeholder): run it now.
   useEffect(() => {
     if (initialIsbn) void handleIsbn(initialIsbn);
+    else if (initialQuery) void search(initialQuery);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const runSearch = async (e: Event) => {
+  const runSearch = (e: Event) => {
     e.preventDefault();
+    void search(query);
+  };
+
+  const search = async (query: string) => {
     if (!query.trim()) return;
     setBusy(true);
     setResults(null);
@@ -206,6 +222,7 @@ export function AddBook({
             setBusy(true);
             try {
               const saved = await saveBook(book);
+              if (replaceId) await deleteBook(replaceId);
               navigate(`/book/${saved.id}`);
             } finally {
               setBusy(false);

@@ -12,7 +12,7 @@ import { sortBooks } from '../library/query';
 export function DiscoverPage() {
   const books = useLive(liveBooks);
   const wishlist = useMemo(
-    () => (books ? sortBooks(books.filter((b) => collectionOf(b) === 'wishlist'), 'added', new Map()) : []),
+    () => (books ? sortBooks(books.filter((b) => collectionOf(b) === 'wishlist' && !b.seriesPlaceholder), 'added', new Map()) : []),
     [books],
   );
   if (!books) return <div class="page" />;

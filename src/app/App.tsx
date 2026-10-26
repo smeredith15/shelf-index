@@ -8,6 +8,7 @@ import { Shelves } from '../features/locations/Shelves';
 import { DiscoverPage } from '../features/discover/DiscoverPage';
 import { PickPage } from '../features/picker/PickPage';
 import { QueuePage } from '../features/queue/QueuePage';
+import { UpNextPage } from '../features/queue/UpNextPage';
 import { StatsPage } from '../features/stats/StatsPage';
 import { UndatedPage } from '../features/reading/UndatedPage';
 import { Settings } from '../features/settings/Settings';
@@ -20,10 +21,10 @@ import { useRoute } from './router';
 import { SyncIndicator } from './SyncIndicator';
 
 const NAV = [
-  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book', 'queue', 'pick'] },
+  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book'] },
   { href: '#/add', label: 'Add', icon: '＋', match: ['add'] },
   { href: '#/shelves', label: 'Shelves', icon: '🗄', match: ['shelves', 'shelf', 'shelve', 'labels'] },
-  { href: '#/discover', label: 'Discover', icon: '✨', match: ['discover'] },
+  { href: '#/upnext', label: 'Up Next', icon: '🔖', match: ['upnext', 'queue', 'pick', 'discover'] },
   { href: '#/stats', label: 'Stats', icon: '📊', match: ['stats', 'undated'] },
   { href: '#/settings', label: 'Settings', icon: '⚙', match: ['settings'] },
 ];
@@ -41,6 +42,9 @@ export function App() {
       break;
     case 'book':
       page = <BookDetail id={arg} key={arg} />;
+      break;
+    case 'upnext':
+      page = <UpNextPage />;
       break;
     case 'discover':
       page = <DiscoverPage />;
@@ -64,6 +68,8 @@ export function App() {
           initialMode={params.get('mode') === 'search' ? 'search' : 'scan'}
           collection={params.get('collection') === 'wishlist' ? 'wishlist' : 'owned'}
           initialIsbn={params.get('isbn')}
+          initialQuery={params.get('q')}
+          replaceId={params.get('replace')}
         />
       );
       break;

@@ -24,6 +24,8 @@ export function ReadingCard({ book, words }: { book: Book; words: number | null 
   const all = useLive(liveSessions);
   const [dialog, setDialog] = useState<null | 'finish' | 'dnf' | 'progress' | 'past' | 'start'>(null);
   const [editing, setEditing] = useState<Session | null>(null);
+  /** e.g. "Next in the series, X, is now on To Read." */
+  const [note, setNote] = useState<string | null>(null);
   if (!all) return null;
 
   const sessions = sessionsFor(all, book.id);
@@ -131,7 +133,7 @@ export function ReadingCard({ book, words }: { book: Book; words: number | null 
           action={dialog === 'finish' ? 'Mark finished' : 'Mark DNF'}
           onClose={() => setDialog(null)}
           onSubmit={async (date) => {
-            await endReading(book, open, dialog === 'finish' ? 'finished' : 'dnf', date);
+            setNote(await endReading(book, open, dialog === 'finish' ? 'finished' : 'dnf', date));
             setDialog(null);
           }}
         />
@@ -150,7 +152,23 @@ export function ReadingCard({ book, words }: { book: Book; words: number | null 
       {open && dialog === 'progress' && (
         <ProgressDialog book={book} session={open} onClose={() => setDialog(null)} />
       )}
-      {dialog === 'past' && <PastReadDialog book={book} onClose={() => setDialog(null)} />}
+      {dialog === 'past' && (
+        <PastReadDialog
+          book={book}
+          onClose={(n) => {
+            setDialog(null);
+            if (n) setNote(n);
+          }}
+        />
+      )}
+      {note && (
+        <p class="notice series-note">
+          {note}{' '}
+          <button class="link" onClick={() => setNote(null)}>
+            OK
+          </button>
+        </p>
+      )}
       {editing && <EditSessionDialog session={editing} onClose={() => setEditing(null)} />}
     </section>
   );
@@ -222,7 +240,7 @@ function ProgressDialog({ book, session, onClose }: { book: Book; session: Sessi
   );
 }
 
-function PastReadDialog({ book, onClose }: { book: Book; onClose: () => void }) {
+function PastReadDialog({ book, onClose }: { book: Book; onClose: (note?: string | null) => void }) {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [outcome, setOutcome] = useState<'finished' | 'dnf'>('finished');
@@ -243,8 +261,7 @@ function PastReadDialog({ book, onClose }: { book: Book; onClose: () => void }) 
           class="primary"
           disabled={!valid}
           onClick={async () => {
-            await addPastRead(book, start, end, outcome);
-            onClose();
+            onClose(await addPastRead(book, start, end, outcome));
           }}
         >
           Add

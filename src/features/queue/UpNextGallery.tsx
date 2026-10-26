@@ -16,7 +16,18 @@ export function loadLayout(): GalleryLayout {
 }
 
 /** Horizontally scrolling Up Next queue for the top of the home screen. */
-export function UpNextGallery({ books, resolved }: { books: Book[]; resolved: Map<string, ResolvedShelf> }) {
+export function UpNextGallery({
+  books,
+  resolved,
+  heading = 'Up Next',
+  inUpNextTab = false,
+}: {
+  books: Book[];
+  resolved: Map<string, ResolvedShelf>;
+  heading?: string;
+  /** On the Up Next tab, which has its own Pick next button. */
+  inUpNextTab?: boolean;
+}) {
   const [layout] = useState(loadLayout);
   const [active, setActive] = useState<Category>('fiction');
   const queues = useMemo(
@@ -62,7 +73,7 @@ export function UpNextGallery({ books, resolved }: { books: Book[]; resolved: Ma
   return (
     <section class="upnext">
       <div class="upnext-head">
-        <h2>Up Next</h2>
+        <h2>{heading}</h2>
         {layout === 'toggle' && (
           <div class="segmented">
             {(['fiction', 'nonfiction'] as Category[]).map((c) => (
@@ -72,8 +83,8 @@ export function UpNextGallery({ books, resolved }: { books: Book[]; resolved: Ma
             ))}
           </div>
         )}
-        <a href="#/pick">Pick next</a>
-        <a href="#/queue">Edit</a>
+        {!inUpNextTab && <a href="#/pick">Pick next</a>}
+        <a href="#/queue">{inUpNextTab ? 'Reorder' : 'Edit'}</a>
       </div>
       {layout === 'rows' ? [row('fiction', true), row('nonfiction', true)] : row(active, false)}
     </section>

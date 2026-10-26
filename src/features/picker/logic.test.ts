@@ -4,10 +4,10 @@ import { calibrate } from '../reading/logic';
 import { DEFAULT_FILTERS, candidates, chooseWinner, lastFinishedCategory, startDuel, weight, weightedPick, type Duel } from './logic';
 
 const books = [
-  blankBook({ id: 'f1', category: 'fiction', queue: { inQueue: true, position: 1 }, pageCount: 150, addedAt: '2026-10-01T12:00:00Z' }),
-  blankBook({ id: 'f2', category: 'fiction', pageCount: 600, owned: false, collection: 'borrowed', addedAt: '2024-10-23T12:00:00Z' }),
-  blankBook({ id: 'w1', category: 'fiction', owned: false, collection: 'wishlist' }),
-  blankBook({ id: 'n1', category: 'nonfiction', queue: { inQueue: true, position: 1 }, pageCount: 300, addedAt: '2026-04-23T12:00:00Z' }),
+  blankBook({ id: 'f1', status: 'to-read', category: 'fiction', queue: { inQueue: true, position: 1 }, pageCount: 150, addedAt: '2026-10-01T12:00:00Z' }),
+  blankBook({ id: 'f2', status: 'to-read', category: 'fiction', pageCount: 600, owned: false, collection: 'borrowed', addedAt: '2024-10-23T12:00:00Z' }),
+  blankBook({ id: 'w1', status: 'to-read', category: 'fiction', owned: false, collection: 'wishlist' }),
+  blankBook({ id: 'n1', status: 'to-read', category: 'nonfiction', queue: { inQueue: true, position: 1 }, pageCount: 300, addedAt: '2026-04-23T12:00:00Z' }),
   blankBook({ id: 'r1', category: 'fiction', status: 'read' }),
 ];
 const finished = (bookId: string, end: string): Session => ({

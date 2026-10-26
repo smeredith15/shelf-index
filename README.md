@@ -30,7 +30,7 @@ Existing book apps cover the basics, but none do these three things well (or for
 
 ### Library
 - **Status:** Owned (the default), Borrowed or Wishlist. Wishlist books live in the Discover tab, not the library.
-- **Reading:** To Read, Reading, Read or DNF, in its own dropdown. It updates itself when you start, finish, DNF or add a past read.
+- **Reading:** blank (the default: no plans to read it), To Read, Reading, Read or DNF, in its own dropdown. It updates itself when you start, finish, DNF or add a past read, and adding a book to Up Next or the radar makes it To Read. Select several books in the library to set their reading status at once.
 - **Read dots:** a green dot in the cover's top corner for books you've read, and a blue dot for books the other reader has read, matching the dots on the real shelves. Mark the blue dot on a book's page or for several selected books at once; its name is set in Settings → Readers.
 - **Sort:** title, author, date added, date read, length, rating, location
 - **Filter:** reading status, fiction/nonfiction, owned or borrowed, read by the other reader, room, bookcase, shelf, tags, series
@@ -55,6 +55,12 @@ Locations follow a fixed hierarchy: **room → bookcase → shelf → row (front
   4. Scan another shelf label to switch shelves, or tap Done.
 - **Shelf view:** everything on one shelf, with front and back rows listed separately. Useful for audits and for remembering what's hidden behind the front row.
 - **Bulk move:** move selected books, or a whole shelf's contents, to another shelf.
+
+### Up Next tab
+The Up Next tab (in place of Discover for now; Discover is linked from it) has the queue at the top, then:
+- **On the radar:** books pinned with 📌 that you're thinking of queueing soon, at the top of the list. Queueing one unpins it.
+- **To Read:** every book marked To Read, owned, borrowed or on the wishlist, with sort and fiction/nonfiction filters.
+- **Next in series:** finishing a book with a series and number puts the next one on To Read, if this is the furthest you've read in the series. If the next book is in the library with no plans, it's marked To Read; if it isn't, a placeholder like "Discworld #5" goes on To Read with a **Find** button that searches for it and swaps in the real book, keeping the series details.
 
 ### Up Next queue
 - A horizontally scrolling gallery at the top of the home screen. It can show fiction and nonfiction as two rows, or one row with a toggle.
