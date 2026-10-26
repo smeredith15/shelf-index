@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { lookupIsbn, searchBooks, setGoogleBooksKey, withProblems } from './lookup';
+import { lookupIsbn, lookupNearbyEditions, searchBooks, setGoogleBooksKey, withProblems } from './lookup';
 
 const responses: Record<string, unknown> = {
   'https://openlibrary.org/isbn/9780441172719.json': {
@@ -109,5 +109,20 @@ describe('lookup problems and fallbacks', () => {
     expect(hit?.title).toBe('A 2026 Novel');
     // The ISBN asked about is kept, not the other edition's.
     expect(hit?.isbn13).toBe('9781400347971');
+  });
+});
+
+describe('lookupNearbyEditions', () => {
+  it('finds a book listed under a neighbouring ISBN', async () => {
+    vi.stubGlobal('fetch', async (url: string) => {
+      const q = new URL(url).searchParams.get('q');
+      if (q === 'isbn:9781400347988') {
+        return new Response(JSON.stringify({ items: [{ volumeInfo: { title: 'The Shark House', authors: ['A. Writer'],
+          industryIdentifiers: [{ type: 'ISBN_13', identifier: '9781400347988' }] } }] }));
+      }
+      return new Response('{}');
+    });
+    const near = await lookupNearbyEditions('9781400347971');
+    expect(near.map((c) => [c.title, c.isbn13])).toEqual([['The Shark House', '9781400347988']]);
   });
 });

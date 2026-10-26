@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { navigate } from '../../app/router';
 import { ActionBar, Cover, Empty } from '../../app/ui';
 import { db } from '../../data/db';
@@ -7,7 +7,14 @@ import { type Book, type Collection, blankBook, withCollection } from '../../dat
 import { findBookByIsbn, loadLocations, saveBook } from '../../data/store';
 import { setCoverFromUrl } from '../../data/covers';
 import { toIsbn13 } from '../../lookup/isbn';
-import { type BookCandidate, type LookupProblem, lookupIsbn, searchBooks, withProblems } from '../../lookup/lookup';
+import {
+  type BookCandidate,
+  type LookupProblem,
+  lookupIsbn,
+  lookupNearbyEditions,
+  searchBooks,
+  withProblems,
+} from '../../lookup/lookup';
 import { BookForm } from '../library/BookForm';
 import { resolveShelves } from '../locations/util';
 import { Scanner } from './Scanner';
@@ -65,6 +72,8 @@ export function AddBook({
   // even if the match found by title lists a different edition's ISBN.
   const [pendingIsbn, setPendingIsbn] = useState<string | null>(initialIsbn);
   const [problem, setProblem] = useState<string | null>(null);
+  /** Set when the results shown are books found under ISBNs neighbouring a missed one. */
+  const [nearbyFor, setNearbyFor] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ book: Book; candidate: BookCandidate | null } | null>(null);
   const [existing, setExisting] = useState<Book | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -106,10 +115,23 @@ export function AddBook({
     // Not found: search by title instead, keeping the printed ISBN for the book that gets added.
     // A later miss doesn't replace it: the first ISBN is the one on the copy in hand.
     setPendingIsbn((current) => current ?? isbn);
-    setProblem(describeProblems(problems));
-    setResults(null);
     setMode('search');
+    // New releases are often listed under another edition's ISBN, which is usually a neighbour.
+    setBusy(true);
+    setStatus('Not found under that ISBN. Checking other editions…');
+    const near = await withProblems(() => lookupNearbyEditions(isbn));
+    setBusy(false);
+    setStatus(null);
+    setProblem(describeProblems([...problems, ...near.problems]));
+    setResults(near.value.length ? near.value : null);
+    setNearbyFor(near.value.length ? isbn : null);
   };
+
+  // Arriving with a missed ISBN (from shelving mode): run the same checks straight away.
+  useEffect(() => {
+    if (initialIsbn) void handleIsbn(initialIsbn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const runSearch = async (e: Event) => {
     e.preventDefault();
@@ -122,6 +144,7 @@ export function AddBook({
       return handleIsbn(isbn);
     }
     const { value, problems } = await withProblems(() => searchBooks(query));
+    setNearbyFor(null);
     setResults(value);
     setProblem(describeProblems(problems));
     setBusy(false);
@@ -192,11 +215,25 @@ export function AddBook({
       </div>
 
       {status && <p class="notice">{status}</p>}
-      {pendingIsbn && (
+      {pendingIsbn && !busy && (
         <p class="notice">
-          No match for ISBN <strong>{pendingIsbn}</strong>. Search by title or author below; whatever you add will be saved with
-          this ISBN, so scanning your copy finds it later.{' '}
-          <button class="link" onClick={() => setPendingIsbn(null)}>
+          {nearbyFor ? (
+            <>
+              <strong>{pendingIsbn}</strong> isn't listed, but other editions with nearby ISBNs are. <strong>Tap yours</strong>, or
+              search by title if it isn't here.
+            </>
+          ) : (
+            <>
+              No match for <strong>{pendingIsbn}</strong> or nearby editions. Search by title or author instead.
+            </>
+          )}{' '}
+          <button
+            class="link"
+            onClick={() => {
+              setPendingIsbn(null);
+              setNearbyFor(null);
+            }}
+          >
             Forget it
           </button>
         </p>

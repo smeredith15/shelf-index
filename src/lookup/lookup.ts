@@ -1,6 +1,6 @@
 import type { Category } from '../data/models';
 import { guessCategory } from './category';
-import { toIsbn13 } from './isbn';
+import { neighborIsbns, toIsbn13 } from './isbn';
 
 /** Book metadata from an outside source, before it becomes a library record. */
 export interface BookCandidate {
@@ -262,6 +262,25 @@ export async function lookupIsbn(input: string): Promise<BookCandidate | null> {
     category: guessCategory([...subjects, ...g.subjects]),
     coverUrls: unique([...ol.coverUrls, ...g.coverUrls]),
   };
+}
+
+/**
+ * For an ISBN no source knows: books listed under neighbouring ISBNs, which are usually other
+ * editions of the same book. Only Google is asked, since it carries new releases far sooner than
+ * Open Library. Results keep the ISBN they were found under.
+ */
+export async function lookupNearbyEditions(input: string, span = 3): Promise<BookCandidate[]> {
+  const isbn13 = toIsbn13(input);
+  if (!isbn13) return [];
+  const hits = await Promise.all(neighborIsbns(isbn13, span).map((n) => googleSearch(`isbn:${n}`).then((r) => r[0] ?? null)));
+  const seen = new Set<string>();
+  return hits.filter((h): h is BookCandidate => {
+    if (!h) return false;
+    const key = `${h.title.toLowerCase()}|${h.authors[0]?.toLowerCase() ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /** Free-text search by title, author or ISBN across both sources. */

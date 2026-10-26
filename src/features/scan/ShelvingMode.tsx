@@ -68,7 +68,7 @@ export function ShelvingMode({ initialShelf }: { initialShelf: string | null }) 
       push({ kind: 'new', text: `Looking up ${isbn}…` });
       const hit = await lookupIsbn(isbn);
       if (!hit) {
-        push({ kind: 'warn', text: `No match for ${isbn}. Tap to search by title.`, href: `#/add?isbn=${isbn}` });
+        push({ kind: 'warn', text: `No match for ${isbn}. Tap to check other editions or search by title.`, href: `#/add?isbn=${isbn}` });
         return;
       }
       const book = await addFromCandidate(hit, { owned: true, collection: 'owned', location: { shelfId: active, row: rowToUse } });

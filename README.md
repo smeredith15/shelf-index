@@ -24,7 +24,7 @@ Existing book apps cover the basics, but none do these three things well (or for
 - Metadata from Open Library and Google Books: title, authors, page count, publisher, publication year, subjects, series where available
 - Choose a cover from the available editions, or photograph your own copy
 - Every field can be edited after import
-- **When an ISBN isn't found** (common for brand-new books, or when a source lists a different edition's ISBN), the app switches to title search and remembers the scanned ISBN; the book you pick or enter is saved with the ISBN printed on your copy, so scanning it later finds it.
+- **When an ISBN isn't found** (common for brand-new books, which sources often list under a different edition's ISBN), the app checks the ISBNs either side of it, since publishers usually number a book's editions consecutively, and offers any match as "tap yours". If nothing nearby matches, it switches to title search. Either way the book is saved with the ISBN you scanned, so scanning it later finds it.
 - **Google Books API key (optional):** without one, Google's shared anonymous quota sometimes runs out and searches miss books. The app says when that happens; Settings → Book lookups explains how to add a free key.
 
 ### Library

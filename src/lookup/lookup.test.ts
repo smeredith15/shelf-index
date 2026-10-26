@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { guessCategory } from './category';
-import { isbn10to13, toIsbn13 } from './isbn';
+import { isbn10to13, neighborIsbns, toIsbn13 } from './isbn';
 import { __test } from './lookup';
 
 describe('isbn', () => {
@@ -37,5 +37,16 @@ describe('parseSeries', () => {
     expect(__test.parseSeries('Discworld ; 4')).toEqual({ series: 'Discworld', seriesIndex: 4 });
     expect(__test.parseSeries('The Expanse #3')).toEqual({ series: 'The Expanse', seriesIndex: 3 });
     expect(__test.parseSeries('Penguin Classics')).toEqual({ series: 'Penguin Classics', seriesIndex: null });
+  });
+});
+
+describe('neighborIsbns', () => {
+  it('lists valid ISBNs either side, nearest first', () => {
+    const n = neighborIsbns('9781400347971');
+    // The printed hardcover and Google's listed edition of the same 2026 book are neighbours.
+    expect(n[0]).toBe('9781400347988');
+    expect(n[1]).toBe('9781400347964');
+    expect(n).toHaveLength(6);
+    expect(n.every((i) => toIsbn13(i) === i)).toBe(true);
   });
 });
