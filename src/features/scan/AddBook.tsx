@@ -7,7 +7,7 @@ import { type Book, type Collection, blankBook, withCollection } from '../../dat
 import { findBookByIsbn, loadLocations, saveBook } from '../../data/store';
 import { setCoverFromUrl } from '../../data/covers';
 import { toIsbn13 } from '../../lookup/isbn';
-import { type BookCandidate, lookupIsbn, searchBooks } from '../../lookup/lookup';
+import { type BookCandidate, type LookupProblem, lookupIsbn, searchBooks, withProblems } from '../../lookup/lookup';
 import { BookForm } from '../library/BookForm';
 import { resolveShelves } from '../locations/util';
 import { Scanner } from './Scanner';
@@ -41,8 +41,30 @@ export async function addFromCandidate(c: BookCandidate, extra: Partial<Book> = 
   return saveBook(book);
 }
 
-export function AddBook({ initialMode, collection = 'owned' }: { initialMode?: Mode; collection?: Collection }) {
-  const [mode, setMode] = useState<Mode>(initialMode ?? 'scan');
+/** Plain-language reasons a lookup came back empty, beyond "not found". */
+export function describeProblems(problems: LookupProblem[]): string | null {
+  if (problems.includes('google-key')) return 'Google Books rejected the API key in Settings → Book lookups.';
+  if (problems.includes('google-limit'))
+    return "Google Books is over its free daily limit, so only Open Library was searched. Adding your own Google Books API key in Settings → Book lookups avoids this.";
+  if (problems.includes('unreachable')) return "Couldn't reach a book service. Check your connection and try again.";
+  return null;
+}
+
+export function AddBook({
+  initialMode,
+  collection = 'owned',
+  initialIsbn = null,
+}: {
+  initialMode?: Mode;
+  collection?: Collection;
+  /** An ISBN that lookup missed (e.g. from shelving mode); kept for whatever book gets added. */
+  initialIsbn?: string | null;
+}) {
+  const [mode, setMode] = useState<Mode>(initialIsbn ? 'search' : (initialMode ?? 'scan'));
+  // The ISBN printed on the copy in hand, when lookup missed it. The book is saved with this one,
+  // even if the match found by title lists a different edition's ISBN.
+  const [pendingIsbn, setPendingIsbn] = useState<string | null>(initialIsbn);
+  const [problem, setProblem] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ book: Book; candidate: BookCandidate | null } | null>(null);
   const [existing, setExisting] = useState<Book | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -54,6 +76,7 @@ export function AddBook({ initialMode, collection = 'owned' }: { initialMode?: M
 
   const startDraft = async (candidate: BookCandidate | null, fallback: Partial<Book> = {}) => {
     let book = withCollection(candidate ? candidateToBook(candidate) : blankBook(fallback), collection);
+    if (pendingIsbn) book = { ...book, isbn13: pendingIsbn };
     // Pre-fill the first cover so the form shows something; it can be changed before saving.
     if (candidate?.coverUrls[0]) book = await setCoverFromUrl(book, candidate.coverUrls[0]);
     setDraft({ book, candidate });
@@ -72,11 +95,19 @@ export function AddBook({ initialMode, collection = 'owned' }: { initialMode?: M
     }
     setBusy(true);
     setStatus(`Looking up ${isbn}…`);
-    const hit = await lookupIsbn(isbn);
+    const { value: hit, problems } = await withProblems(() => lookupIsbn(isbn));
     setBusy(false);
     setStatus(null);
-    await startDraft(hit, { isbn13: isbn });
-    if (!hit) setStatus(`Nothing found for ${isbn}. Fill in the details by hand.`);
+    if (hit) {
+      setPendingIsbn(null);
+      await startDraft(hit, { isbn13: isbn });
+      return;
+    }
+    // Not found: search by title instead, keeping the printed ISBN for the book that gets added.
+    setPendingIsbn(isbn);
+    setProblem(describeProblems(problems));
+    setResults(null);
+    setMode('search');
   };
 
   const runSearch = async (e: Event) => {
@@ -89,7 +120,9 @@ export function AddBook({ initialMode, collection = 'owned' }: { initialMode?: M
       setBusy(false);
       return handleIsbn(isbn);
     }
-    setResults(await searchBooks(query));
+    const { value, problems } = await withProblems(() => searchBooks(query));
+    setResults(value);
+    setProblem(describeProblems(problems));
     setBusy(false);
   };
 
@@ -158,6 +191,16 @@ export function AddBook({ initialMode, collection = 'owned' }: { initialMode?: M
       </div>
 
       {status && <p class="notice">{status}</p>}
+      {pendingIsbn && (
+        <p class="notice">
+          No match for ISBN <strong>{pendingIsbn}</strong>. Search by title or author below; whatever you add will be saved with
+          this ISBN, so scanning your copy finds it later.{' '}
+          <button class="link" onClick={() => setPendingIsbn(null)}>
+            Forget it
+          </button>
+        </p>
+      )}
+      {problem && <p class="notice notice-warn">{problem}</p>}
 
       {existing && (
         <div class="notice">

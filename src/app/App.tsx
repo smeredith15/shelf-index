@@ -11,6 +11,10 @@ import { QueuePage } from '../features/queue/QueuePage';
 import { StatsPage } from '../features/stats/StatsPage';
 import { UndatedPage } from '../features/reading/UndatedPage';
 import { Settings } from '../features/settings/Settings';
+import { useEffect } from 'preact/hooks';
+import { useLive } from '../data/hooks';
+import { loadSettings } from '../data/store';
+import { setGoogleBooksKey } from '../lookup/lookup';
 import { ReadersProvider } from './readers';
 import { useRoute } from './router';
 import { SyncIndicator } from './SyncIndicator';
@@ -26,6 +30,8 @@ const NAV = [
 
 export function App() {
   const { path, params } = useRoute();
+  const settings = useLive(loadSettings);
+  useEffect(() => setGoogleBooksKey(settings?.googleBooksKey), [settings?.googleBooksKey]);
   const [section = '', arg = ''] = path;
 
   let page;
@@ -57,6 +63,7 @@ export function App() {
           key={params.toString()}
           initialMode={params.get('mode') === 'search' ? 'search' : 'scan'}
           collection={params.get('collection') === 'wishlist' ? 'wishlist' : 'owned'}
+          initialIsbn={params.get('isbn')}
         />
       );
       break;

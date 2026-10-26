@@ -28,6 +28,10 @@ export function Settings({ section }: { section?: string }) {
         <h2>Locations</h2>
         <LocationsEditor />
       </section>
+      <section id="lookups" class="card">
+        <h2>Book lookups</h2>
+        <LookupSettings />
+      </section>
       <section id="readers" class="card">
         <h2>Readers</h2>
         <ReadersSettings />
@@ -122,6 +126,55 @@ function SyncSettings() {
           </button>
         )}
         <button class="primary">{existing ? 'Save' : 'Connect'}</button>
+      </div>
+    </form>
+  );
+}
+
+function LookupSettings() {
+  const settings = useLive(loadSettings);
+  const [key, setKey] = useState<string | null>(null);
+  if (!settings) return null;
+  const value = key ?? settings.googleBooksKey ?? '';
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void saveSettings({ ...settings, googleBooksKey: value.trim() || undefined });
+        setKey(null);
+      }}
+    >
+      <p class="muted">
+        Books are looked up in Open Library and Google Books. Without a key, Google shares one free daily quota among everyone
+        using it anonymously, and when that runs out searches quietly miss books. A free key of your own avoids that.
+      </p>
+      <details class="howto">
+        <summary>How to get a free Google Books API key</summary>
+        <ol>
+          <li>
+            Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a> and
+            create a project (any name).
+          </li>
+          <li>
+            Open <em>APIs &amp; Services → Library</em>, search for <em>Books API</em> and click <em>Enable</em>.
+          </li>
+          <li>
+            Open <em>APIs &amp; Services → Credentials → Create credentials → API key</em>.
+          </li>
+          <li>
+            Edit the key: under <em>Application restrictions</em> choose <em>Websites</em> and add{' '}
+            <code>https://shelf-index.pages.dev/*</code>; under <em>API restrictions</em> choose <em>Books API</em>. Save.
+          </li>
+          <li>Paste the key below. It's saved in your private data repo, so every device uses it.</li>
+        </ol>
+      </details>
+      <Field label="Google Books API key" hint={settings.googleBooksKey ? 'A key is saved.' : 'Optional'}>
+        <input value={value} autoComplete="off" autoCapitalize="off" placeholder="AIza…" onInput={(e) => setKey(e.currentTarget.value)} />
+      </Field>
+      <div class="form-actions">
+        <button class="primary" disabled={key === null}>
+          Save key
+        </button>
       </div>
     </form>
   );

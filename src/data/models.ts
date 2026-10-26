@@ -85,6 +85,8 @@ export interface SyncedSettings extends Syncable {
   upNextAutoMove: boolean;
   /** Name shown for the blue-dot reader. */
   partnerName: string;
+  /** Optional Google Books API key, so lookups don't share Google's anonymous daily quota. */
+  googleBooksKey?: string;
   /** Narration speed used for audiobook estimates until enough books calibrate it. */
   defaultWordsPerMinute: number;
 }

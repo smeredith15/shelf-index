@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { lookupIsbn, searchBooks } from './lookup';
+import { lookupIsbn, searchBooks, setGoogleBooksKey, withProblems } from './lookup';
 
 const responses: Record<string, unknown> = {
   'https://openlibrary.org/isbn/9780441172719.json': {
@@ -72,5 +72,42 @@ describe('lookupIsbn', () => {
   it('searches by ISBN when the query is one', async () => {
     stubFetch();
     expect((await searchBooks('978-0-441-17271-9')).map((c) => c.title)).toEqual(['Dune']);
+  });
+});
+
+describe('lookup problems and fallbacks', () => {
+  afterEach(() => setGoogleBooksKey(''));
+
+  it('reports when Google is over its daily limit instead of claiming nothing exists', async () => {
+    vi.stubGlobal('fetch', async (url: string) =>
+      url.includes('googleapis') ? new Response('{"error":{"code":429}}', { status: 429 }) : new Response('{}', { status: 404 }),
+    );
+    const { value, problems } = await withProblems(() => searchBooks('Some New Book'));
+    expect(value).toEqual([]);
+    expect(problems).toEqual(['google-limit']);
+  });
+
+  it('sends the Google Books key when one is set', async () => {
+    const seen: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      seen.push(url);
+      return new Response('{}', { status: 404 });
+    });
+    setGoogleBooksKey('KEY123');
+    await searchBooks('anything');
+    expect(seen.find((u) => u.includes('googleapis'))).toContain('&key=KEY123');
+  });
+
+  it('falls back to the Open Library search index for ISBNs the edition lookup misses', async () => {
+    vi.stubGlobal('fetch', async (url: string) => {
+      if (url.startsWith('https://openlibrary.org/search.json?isbn=9781400347971')) {
+        return new Response(JSON.stringify({ docs: [{ key: '/works/OL1W', title: 'A 2026 Novel', author_name: ['New Author'], isbn: ['9781400347988'] }] }));
+      }
+      return new Response('{}', { status: 404 });
+    });
+    const hit = await lookupIsbn('9781400347971');
+    expect(hit?.title).toBe('A 2026 Novel');
+    // The ISBN asked about is kept, not the other edition's.
+    expect(hit?.isbn13).toBe('9781400347971');
   });
 });

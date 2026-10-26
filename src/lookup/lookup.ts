@@ -32,11 +32,36 @@ function unique<T>(items: T[]): T[] {
   return [...new Set(items)];
 }
 
+/** Why a lookup came back empty, when it wasn't simply "not found". */
+export type LookupProblem = 'google-limit' | 'google-key' | 'unreachable';
+
+let problems = new Set<LookupProblem>();
+let googleKey = '';
+
+/** Optional Google Books API key; without one, Google's shared free quota sometimes runs out. */
+export function setGoogleBooksKey(key: string | undefined): void {
+  googleKey = (key ?? '').trim();
+}
+
+/** Runs a lookup and reports any problems hit along the way. */
+export async function withProblems<T>(run: () => Promise<T>): Promise<{ value: T; problems: LookupProblem[] }> {
+  problems = new Set();
+  const value = await run();
+  return { value, problems: [...problems] };
+}
+
 async function getJson<T>(url: string): Promise<T | null> {
   try {
     const res = await fetch(url);
-    return res.ok ? ((await res.json()) as T) : null;
+    if (res.ok) return (await res.json()) as T;
+    if (url.includes('googleapis.com')) {
+      // 429/403 mean the daily limit; 400 with a key usually means the key is wrong or restricted.
+      if (res.status === 429 || res.status === 403) problems.add(googleKey && res.status === 403 ? 'google-key' : 'google-limit');
+      else if (res.status === 400 && googleKey) problems.add('google-key');
+    }
+    return null;
   } catch {
+    problems.add('unreachable');
     return null;
   }
 }
@@ -78,7 +103,11 @@ function parseSeries(raw: string | undefined): { series: string | null; seriesIn
 
 async function openLibraryByIsbn(isbn13: string): Promise<BookCandidate | null> {
   const ed = await getJson<OLEdition>(`${OL}/isbn/${isbn13}.json`);
-  if (!ed?.title) return null;
+  if (!ed?.title) {
+    // The edition endpoint misses some ISBNs that the search index has, especially new ones.
+    const hit = (await openLibrarySearchQuery(`isbn=${isbn13}`))[0];
+    return hit ? { ...hit, isbn13 } : null;
+  }
   const workKey = ed.works?.[0]?.key ?? null;
   const work = workKey ? await getJson<OLWork>(`${OL}${workKey}.json`) : null;
   const authorKeys = ed.authors?.map((a) => a.key) ?? work?.authors?.map((a) => a.author.key) ?? [];
@@ -120,11 +149,13 @@ interface OLSearchDoc {
   series?: string[];
 }
 
-async function openLibrarySearch(query: string): Promise<BookCandidate[]> {
+function openLibrarySearch(query: string): Promise<BookCandidate[]> {
+  return openLibrarySearchQuery(`q=${encodeURIComponent(query)}`);
+}
+
+async function openLibrarySearchQuery(params: string): Promise<BookCandidate[]> {
   const fields = 'key,title,subtitle,author_name,first_publish_year,isbn,cover_i,number_of_pages_median,subject,publisher';
-  const data = await getJson<{ docs: OLSearchDoc[] }>(
-    `${OL}/search.json?q=${encodeURIComponent(query)}&fields=${fields}&limit=20`,
-  );
+  const data = await getJson<{ docs: OLSearchDoc[] }>(`${OL}/search.json?${params}&fields=${fields}&limit=20`);
   return (data?.docs ?? []).map((d) => {
     const isbn13 = d.isbn?.map((i) => toIsbn13(i)).find((i): i is string => !!i) ?? null;
     const subjects = (d.subject ?? []).slice(0, 15);
@@ -201,8 +232,9 @@ function googleCandidate(v: GVolume): BookCandidate | null {
 }
 
 async function googleSearch(q: string): Promise<BookCandidate[]> {
+  const key = googleKey ? `&key=${encodeURIComponent(googleKey)}` : '';
   const data = await getJson<{ items?: GVolume[] }>(
-    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20&printType=books`,
+    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20&printType=books${key}`,
   );
   return (data?.items ?? []).map(googleCandidate).filter((c): c is BookCandidate => !!c);
 }

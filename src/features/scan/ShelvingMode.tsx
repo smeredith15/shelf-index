@@ -14,6 +14,7 @@ interface LogEntry {
   key: number;
   text: string;
   bookId?: string;
+  href?: string;
   kind: 'ok' | 'new' | 'warn' | 'shelf';
 }
 
@@ -67,7 +68,7 @@ export function ShelvingMode({ initialShelf }: { initialShelf: string | null }) 
       push({ kind: 'new', text: `Looking up ${isbn}…` });
       const hit = await lookupIsbn(isbn);
       if (!hit) {
-        push({ kind: 'warn', text: `No match for ${isbn}. Add it from Add → Search.` });
+        push({ kind: 'warn', text: `No match for ${isbn}. Tap to search by title.`, href: `#/add?isbn=${isbn}` });
         return;
       }
       const book = await addFromCandidate(hit, { owned: true, collection: 'owned', location: { shelfId: active, row: rowToUse } });
@@ -116,7 +117,7 @@ export function ShelvingMode({ initialShelf }: { initialShelf: string | null }) 
       <ul class="shelving-log">
         {log.map((e) => (
           <li key={e.key} class={`log-${e.kind}`}>
-            {e.bookId ? <a href={`#/book/${e.bookId}`}>{e.text}</a> : e.text}
+            {e.bookId ? <a href={`#/book/${e.bookId}`}>{e.text}</a> : e.href ? <a href={e.href}>{e.text}</a> : e.text}
           </li>
         ))}
       </ul>

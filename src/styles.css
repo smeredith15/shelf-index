@@ -1685,3 +1685,22 @@ legend {
   margin: 12px 0 0;
   font-size: 0.9rem;
 }
+.notice-warn {
+  background: transparent;
+  border: 1px solid var(--warn);
+}
+.howto {
+  margin: 8px 0 12px;
+}
+.howto summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.howto ol {
+  padding-left: 20px;
+  font-size: 0.9rem;
+}
+.howto code {
+  font-size: 0.85em;
+  word-break: break-all;
+}
