@@ -74,9 +74,9 @@ export function AddBook({
   const locs = useLive(loadLocations);
   const resolved = locs ? resolveShelves(locs) : new Map();
 
-  const startDraft = async (candidate: BookCandidate | null, fallback: Partial<Book> = {}) => {
+  const startDraft = async (candidate: BookCandidate | null, fallback: Partial<Book> = {}, isbn = pendingIsbn) => {
     let book = withCollection(candidate ? candidateToBook(candidate) : blankBook(fallback), collection);
-    if (pendingIsbn) book = { ...book, isbn13: pendingIsbn };
+    if (isbn) book = { ...book, isbn13: isbn };
     // Pre-fill the first cover so the form shows something; it can be changed before saving.
     if (candidate?.coverUrls[0]) book = await setCoverFromUrl(book, candidate.coverUrls[0]);
     setDraft({ book, candidate });
@@ -99,12 +99,13 @@ export function AddBook({
     setBusy(false);
     setStatus(null);
     if (hit) {
-      setPendingIsbn(null);
-      await startDraft(hit, { isbn13: isbn });
+      // Searching another edition's ISBN (e.g. the one Google lists) still saves the printed one.
+      await startDraft(hit, {}, pendingIsbn ?? isbn);
       return;
     }
     // Not found: search by title instead, keeping the printed ISBN for the book that gets added.
-    setPendingIsbn(isbn);
+    // A later miss doesn't replace it: the first ISBN is the one on the copy in hand.
+    setPendingIsbn((current) => current ?? isbn);
     setProblem(describeProblems(problems));
     setResults(null);
     setMode('search');
