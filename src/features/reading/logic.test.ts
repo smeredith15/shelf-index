@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { type Session, blankBook } from '../../data/models';
 import { daysBetween } from './dates';
-import { calibrate, currentPage, effectiveWordCount, formatDuration, pace, parseDuration, readingDays, wordsFromSample } from './logic';
+import {
+  calibrate,
+  currentPage,
+  effectiveWordCount,
+  formatDuration,
+  fractionRead,
+  pace,
+  parseDuration,
+  readingDays,
+  readingPages,
+  wordsFromSample,
+} from './logic';
 
 const session = (patch: Partial<Session> = {}): Session => ({
   id: 'r1',
@@ -32,7 +43,7 @@ describe('reading days and pace', () => {
   });
 
   it('computes pace from progress for books in progress', () => {
-    const book = { pageCount: 300 };
+    const book = { pageCount: 300, bodyPages: null };
     const s = session({
       start: '2026-10-01',
       end: null,
@@ -46,6 +57,13 @@ describe('reading days and pace', () => {
     expect(pace(s, 90000, book, '2026-10-05')).toBe(9000);
     expect(pace(session(), 90000, book)).toBe(5000);
     expect(pace(session({ outcome: 'reading', end: null }), 90000, book)).toBeNull();
+
+    // With body pages entered, page 150 is half of a 300-page body even in a 340-page book.
+    const withBody = { pageCount: 340, bodyPages: 300 };
+    expect(fractionRead(s, withBody)).toBe(0.5);
+    expect(pace(s, 90000, withBody, '2026-10-05')).toBe(9000);
+    expect(readingPages(withBody)).toBe(300);
+    expect(readingPages({ pageCount: 340, bodyPages: null })).toBe(340);
   });
 });
 

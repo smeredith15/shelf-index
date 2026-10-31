@@ -127,3 +127,14 @@ describe('resolveRange', () => {
     expect(resolveRange({ preset: 'custom', from: '2026-03-01', to: '2026-02-01' }, null, '2026-10-23')).toEqual({ from: '2026-02-01', to: '2026-03-01' });
   });
 });
+
+describe('body pages', () => {
+  it('measures progress and pages read against body pages when known', () => {
+    const b = blankBook({ id: 'bp', status: 'reading', pageCount: 360, bodyPages: 300, wordCount: { value: 90_000, source: 'looked-up' } });
+    const open = session({ bookId: 'bp', start: '2026-10-01', end: null, outcome: 'reading', progress: [{ date: '2026-10-10', page: 150 }] });
+    const stats = readStats({ books: [b], sessions: [open], calibration: calibrate([b]), today: '2026-10-20' }, '2026-10-01', '2026-10-20', 'spread');
+    // Page 150 of a 300-page body is half the book: 45K words and 150 pages, not 150/360.
+    expect(stats.words).toBe(45_000);
+    expect(stats.pages).toBe(150);
+  });
+});

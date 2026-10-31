@@ -73,6 +73,7 @@ The Up Next tab (in place of Discover for now; Discover is linked from it) has t
 - A **Now reading** row at the top of the home screen, above Up Next, shows each book in progress with its page, progress bar, day count and whether it's paused.
 - Start, finish, pause, resume or DNF a book.
 - Books marked Read with no dates are flagged at the top of Stats ("4 read books have no dates"), since stats can only count dated reads. The review list lets you open each one to add a past read, or choose **Don't know** to stop it being flagged (restorable later). A book's page offers the same two choices.
+- Progress, pace and pages-read stats are measured against body pages when you've entered them, and total pages otherwise.
 - Optional progress updates ("page 212 on Oct 23") make pace calculations more accurate.
 - Paused time is excluded from pace.
 

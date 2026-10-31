@@ -15,7 +15,7 @@ import {
 } from '../../data/reading';
 import { saveBook } from '../../data/store';
 import { formatDate, today } from './dates';
-import { currentPage, isPaused, pace, readingDays, sessionsFor } from './logic';
+import { currentPage, isPaused, pace, readingDays, readingPages, sessionsFor } from './logic';
 
 const OUTCOME_LABEL = { finished: 'Finished', dnf: 'Did not finish', reading: 'Reading' } as const;
 
@@ -29,6 +29,7 @@ export function ReadingCard({ book, words }: { book: Book; words: number | null 
   if (!all) return null;
 
   const sessions = sessionsFor(all, book.id);
+  const pages = readingPages(book);
   const open = sessions.find((s) => s.end === null);
   const finishedBefore = sessions.some((s) => s.outcome === 'finished');
 
@@ -45,13 +46,13 @@ export function ReadingCard({ book, words }: { book: Book; words: number | null 
               <>
                 {' '}
                 · page {currentPage(open)}
-                {book.pageCount ? ` of ${book.pageCount}` : ''}
+                {pages ? ` of ${pages}` : ''}
               </>
             )}
           </p>
-          {book.pageCount && currentPage(open) !== null && (
+          {pages && currentPage(open) !== null && (
             <div class="progress-bar">
-              <div style={{ width: `${Math.min(100, (100 * currentPage(open)!) / book.pageCount)}%` }} />
+              <div style={{ width: `${Math.min(100, (100 * currentPage(open)!) / pages)}%` }} />
             </div>
           )}
           <div class="actions">
@@ -206,7 +207,9 @@ function ProgressDialog({ book, session, onClose }: { book: Book; session: Sessi
   const [page, setPage] = useState(String(currentPage(session) ?? ''));
   const [date, setDate] = useState(today());
   const n = Number(page);
-  const valid = page !== '' && n > 0 && (!book.pageCount || n <= book.pageCount);
+  // Page numbers past the body (into the back matter) still count as finishing it.
+  const pages = readingPages(book);
+  const valid = page !== '' && n > 0 && (!book.pageCount || n <= Math.max(book.pageCount, pages ?? 0));
   return (
     <Modal title="Log progress" onClose={onClose}>
       <form
@@ -218,7 +221,7 @@ function ProgressDialog({ book, session, onClose }: { book: Book; session: Sessi
         }}
       >
         <div class="row-2">
-          <Field label={book.pageCount ? `Page (of ${book.pageCount})` : 'Page'}>
+          <Field label={pages ? `Page (of ${pages}${book.bodyPages ? ' body pages' : ''})` : 'Page'}>
             <input inputMode="numeric" value={page} autoFocus onInput={(e) => setPage(e.currentTarget.value.replace(/\D/g, ''))} />
           </Field>
           <Field label="Date">

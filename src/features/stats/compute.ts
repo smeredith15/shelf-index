@@ -1,6 +1,6 @@
 import { type Book, type Category, type Session, collectionOf } from '../../data/models';
 import { addDays, dateOf, daysBetween, eachDay, monthOf } from '../reading/dates';
-import { type Calibration, type EffectiveWordCount, effectiveWordCount, readingDays } from '../reading/logic';
+import { type Calibration, type EffectiveWordCount, effectiveWordCount, readingDays, readingPages } from '../reading/logic';
 import { dailyFractions } from './allocate';
 import type { CountMode } from './range';
 
@@ -82,7 +82,7 @@ export function earliestRead(sessions: Session[]): string | null {
 function dailyTotals(prepared: Prepared[], asOf: string) {
   const days = new Map<string, { words: number; pages: number; bySource: Record<WordSource, number>; byCat: Record<Category, number> }>();
   for (const { session, book, wc } of prepared) {
-    for (const [d, f] of dailyFractions(session, book.pageCount, asOf)) {
+    for (const [d, f] of dailyFractions(session, readingPages(book), asOf)) {
       let row = days.get(d);
       if (!row) {
         row = { words: 0, pages: 0, bySource: { counted: 0, audiobook: 0, estimated: 0 }, byCat: { fiction: 0, nonfiction: 0 } };
@@ -93,7 +93,7 @@ function dailyTotals(prepared: Prepared[], asOf: string) {
         row.bySource[sourceOf(wc)] += f * wc.value;
         row.byCat[book.category] += f * wc.value;
       }
-      row.pages += f * (book.pageCount ?? 0);
+      row.pages += f * (readingPages(book) ?? 0);
     }
   }
   return days;
@@ -172,13 +172,13 @@ export function readStats(ctx: Context, from: string, to: string, mode: CountMod
     for (const { session, book, wc } of finished) {
       const w = wc?.value ?? 0;
       words += w;
-      pages += book.pageCount ?? 0;
+      pages += readingPages(book) ?? 0;
       if (wc) wordsBySource[sourceOf(wc)] += w;
       wordsByCategory[book.category] += w;
       const m = months.get(monthOf(session.end!));
       if (m) {
         m.words += w;
-        m.pages += book.pageCount ?? 0;
+        m.pages += readingPages(book) ?? 0;
       }
     }
   }

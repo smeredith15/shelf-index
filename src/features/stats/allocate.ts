@@ -7,18 +7,19 @@ import { addDays, eachDay } from '../reading/dates';
  * they belong; paused days get nothing. Finished reads add up to 1; unfinished ones stop at the
  * last progress update.
  */
-export function dailyFractions(session: Session, pageCount: number | null, asOf: string): Map<string, number> {
+/** `pages` is the book's reading length (body pages when known), so a logged page maps to a fraction. */
+export function dailyFractions(session: Session, pages: number | null, asOf: string): Map<string, number> {
   const out = new Map<string, number>();
   const end = session.end ?? asOf;
   if (end < session.start) return out;
 
   const checkpoints: { date: string; f: number }[] = [{ date: session.start, f: 0 }];
-  if (pageCount) {
+  if (pages) {
     const progress = [...session.progress]
       .filter((p) => p.date >= session.start && p.date <= end)
       .sort((a, b) => a.date.localeCompare(b.date) || a.page - b.page);
     for (const p of progress) {
-      const f = Math.min(1, p.page / pageCount);
+      const f = Math.min(1, p.page / pages);
       const last = checkpoints[checkpoints.length - 1];
       if (f <= last.f) continue;
       if (p.date === last.date && checkpoints.length > 1) last.f = f;

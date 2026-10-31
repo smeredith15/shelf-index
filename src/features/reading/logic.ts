@@ -29,15 +29,21 @@ export function currentPage(session: Session): number | null {
 }
 
 /** Fraction of the book read in this session (1 when finished). */
-export function fractionRead(session: Session, book: Pick<Book, 'pageCount'>): number | null {
+export function fractionRead(session: Session, book: Pick<Book, 'pageCount' | 'bodyPages'>): number | null {
   if (session.outcome === 'finished') return 1;
   const page = currentPage(session);
-  if (page === null || !book.pageCount) return null;
-  return Math.min(1, page / book.pageCount);
+  const pages = readingPages(book);
+  if (page === null || !pages) return null;
+  return Math.min(1, page / pages);
 }
 
 /** Words per day for a session, or null if there isn't enough to go on. */
-export function pace(session: Session, words: number | null, book: Pick<Book, 'pageCount'>, asOf = today()): number | null {
+export function pace(
+  session: Session,
+  words: number | null,
+  book: Pick<Book, 'pageCount' | 'bodyPages'>,
+  asOf = today(),
+): number | null {
   if (!words) return null;
   const fraction = fractionRead(session, book);
   if (fraction === null || fraction === 0) return null;
@@ -62,9 +68,16 @@ export function wordsFromSample(wordsOnFiveLines: number, linesPerPage: number, 
   return Math.round((wordsOnFiveLines / 5) * linesPerPage * bodyPages);
 }
 
-function pagesFor(book: Pick<Book, 'bodyPages' | 'pageCount'>): number | null {
-  return book.bodyPages ?? book.pageCount ?? null;
+/**
+ * The pages actually read: body pages when known (front and back matter aren't read, and page
+ * numbers usually start at chapter one), otherwise the total. Progress, pace, pages-read stats
+ * and word estimates all measure against this.
+ */
+export function readingPages(book: Pick<Book, 'bodyPages' | 'pageCount'>): number | null {
+  return book.bodyPages || book.pageCount || null;
 }
+
+const pagesFor = readingPages;
 
 export interface FormatCalibration {
   wordsPerPage: number;
