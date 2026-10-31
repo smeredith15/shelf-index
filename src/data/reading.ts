@@ -3,7 +3,21 @@ import { type Book, type Session, blankBook, newId, now } from './models';
 import { liveBooks, loadSettings, markDirty, saveBook, saveBooks } from './store';
 import { queueFor, renumber } from '../features/queue/logic';
 import { today } from '../features/reading/dates';
-import { nextInSeries } from '../features/reading/series';
+import { findByTitle, nextInSeries } from '../features/reading/series';
+import { findSeriesForBook, seriesEntries } from '../lookup/wikidata';
+
+/** The real title of book `index` in `finished`'s series, from Wikidata, within a few seconds. */
+async function wikidataTitleAt(finished: Book, index: number): Promise<{ title: string; authors: string[] } | null> {
+  const lookup = (async () => {
+    const match = await findSeriesForBook(finished.title, finished.authors);
+    if (!match) return null;
+    const entries = await seriesEntries(match.seriesId);
+    const entry = entries?.find((e) => e.ordinal === index);
+    return entry ? { title: entry.title, authors: entry.authors } : null;
+  })();
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000));
+  return Promise.race([lookup, timeout]);
+}
 
 // ---------- Sessions ----------
 
@@ -54,9 +68,25 @@ export async function promoteNextInSeries(finished: Book): Promise<string | null
     await saveBook({ ...next.book, status: 'to-read' });
     return `Next in the series, ${next.book.title}, is now on To Read.`;
   }
+  // Not matched by series name. The library may still have it under no (or another) series name,
+  // so find its real title and look for that.
+  const real = await wikidataTitleAt(finished, next.index);
+  if (real) {
+    const have = findByTitle(books, real.title, real.authors.length ? real.authors : finished.authors);
+    if (have) {
+      const wasUnplanned = have.status === 'none';
+      await saveBook({
+        ...have,
+        series: have.series || next.series,
+        seriesIndex: have.seriesIndex ?? next.index,
+        status: wasUnplanned ? 'to-read' : have.status,
+      });
+      return wasUnplanned ? `Next in the series, ${have.title}, is now on To Read.` : null;
+    }
+  }
   await saveBook(
     blankBook({
-      title: `${next.series} #${next.index}`,
+      title: real?.title ?? `${next.series} #${next.index}`,
       series: next.series,
       seriesIndex: next.index,
       authors: finished.authors,
@@ -67,7 +97,8 @@ export async function promoteNextInSeries(finished: Book): Promise<string | null
       seriesPlaceholder: true,
     }),
   );
-  return `${next.series} #${next.index} isn't in your library, so a placeholder is on To Read. Find it from Up Next.`;
+  const name = real ? real.title : `${next.series} #${next.index}`;
+  return `Next in the series, ${name}, isn't in your library, so a placeholder is on To Read. Find it from Up Next.`;
 }
 
 /** Ends a session as finished or DNF and updates the book's status to match. */

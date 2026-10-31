@@ -245,6 +245,9 @@ export function Library({ params }: { params: URLSearchParams }) {
             <input type="checkbox" checked={filters.unshelved} onChange={(e) => setFilter('unshelved', e.currentTarget.checked)} />
             No location
           </label>
+          <a class="link-inline" href="#/series">
+            Browse series ›
+          </a>
           {activeFilterCount > 0 && (
             <button class="link" onClick={() => setFilters({ ...EMPTY_FILTERS, text: filters.text })}>
               Clear filters

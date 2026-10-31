@@ -1735,3 +1735,48 @@ select.small-select {
   margin: 12px 0 0;
   font-size: 0.9rem;
 }
+
+/* ---------- Series ---------- */
+
+.series-link {
+  margin: -6px 0 12px;
+  font-size: 0.9rem;
+}
+.series-list li {
+  gap: 8px;
+}
+.series-num {
+  min-width: 26px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.series-missing-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  min-width: 0;
+}
+.series-missing strong {
+  color: var(--muted);
+}
+.series-gap {
+  border: 1.5px dashed var(--border);
+  background: transparent;
+}
+.series-rename {
+  margin-top: 20px;
+}
+.link-inline {
+  align-self: center;
+  font-size: 0.9rem;
+}
+.fill-series {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.series-list .list-main strong {
+  white-space: normal;
+}

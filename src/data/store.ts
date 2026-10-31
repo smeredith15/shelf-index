@@ -1,4 +1,5 @@
 import { db } from './db';
+import { seriesKey, titleKey } from '../features/reading/series';
 import {
   type Book,
   type Bookcase,
@@ -32,14 +33,44 @@ export async function markDirty(): Promise<void> {
 export async function saveBook(book: Book): Promise<Book> {
   const stamped = { ...book, updatedAt: now() };
   await db.books.put(stamped);
+  await retirePlaceholders([stamped]);
   await markDirty();
   return stamped;
 }
 
 export async function saveBooks(books: Book[]): Promise<void> {
   const t = now();
-  await db.books.bulkPut(books.map((b) => ({ ...b, updatedAt: t })));
+  const stamped = books.map((b) => ({ ...b, updatedAt: t }));
+  await db.books.bulkPut(stamped);
+  await retirePlaceholders(stamped);
   await markDirty();
+}
+
+const surname = (name: string) => name.trim().split(/\s+/).pop()?.toLowerCase() ?? '';
+function sharesAuthor(a: Book, b: Book): boolean {
+  if (a.authors.length === 0 || b.authors.length === 0) return true;
+  const names = new Set(a.authors.map(surname));
+  return b.authors.some((n) => names.has(surname(n)));
+}
+
+/**
+ * Removes series placeholders that a real book now fills: same series (loosely) and number, or the
+ * same title when the placeholder was named after the real book.
+ */
+async function retirePlaceholders(saved: Book[]): Promise<void> {
+  const real = saved.filter((b) => !b.deleted && !b.seriesPlaceholder);
+  if (real.length === 0) return;
+  const placeholders = (await db.books.toArray()).filter((b) => b.seriesPlaceholder && !b.deleted);
+  const filled = placeholders.filter((p) =>
+    real.some(
+      (b) =>
+        (b.series && p.series && b.seriesIndex !== null && seriesKey(b.series) === seriesKey(p.series) && b.seriesIndex === p.seriesIndex) ||
+        (titleKey(b.title) === titleKey(p.title) && sharesAuthor(b, p)),
+    ),
+  );
+  if (filled.length === 0) return;
+  const t = now();
+  await db.books.bulkPut(filled.map((p) => ({ ...p, deleted: true, queue: { inQueue: false, position: null }, updatedAt: t })));
 }
 
 export async function deleteBook(id: string): Promise<void> {

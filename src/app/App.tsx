@@ -9,6 +9,7 @@ import { DiscoverPage } from '../features/discover/DiscoverPage';
 import { PickPage } from '../features/picker/PickPage';
 import { QueuePage } from '../features/queue/QueuePage';
 import { UpNextPage } from '../features/queue/UpNextPage';
+import { SeriesIndexPage, SeriesPage } from '../features/series/SeriesPage';
 import { StatsPage } from '../features/stats/StatsPage';
 import { UndatedPage } from '../features/reading/UndatedPage';
 import { Settings } from '../features/settings/Settings';
@@ -21,7 +22,7 @@ import { useRoute } from './router';
 import { SyncIndicator } from './SyncIndicator';
 
 const NAV = [
-  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book'] },
+  { href: '#/', label: 'Library', icon: '📚', match: ['', 'book', 'series'] },
   { href: '#/add', label: 'Add', icon: '＋', match: ['add'] },
   { href: '#/shelves', label: 'Shelves', icon: '🗄', match: ['shelves', 'shelf', 'shelve', 'labels'] },
   { href: '#/upnext', label: 'Up Next', icon: '🔖', match: ['upnext', 'queue', 'pick', 'discover'] },
@@ -42,6 +43,9 @@ export function App() {
       break;
     case 'book':
       page = <BookDetail id={arg} key={arg} />;
+      break;
+    case 'series':
+      page = arg ? <SeriesPage name={decodeURIComponent(arg)} key={arg} /> : <SeriesIndexPage />;
       break;
     case 'upnext':
       page = <UpNextPage />;

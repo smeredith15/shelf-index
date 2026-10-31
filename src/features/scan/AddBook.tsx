@@ -7,6 +7,7 @@ import { type Book, type Collection, blankBook, withCollection } from '../../dat
 import { deleteBook, findBookByIsbn, loadLocations, saveBook } from '../../data/store';
 import { setCoverFromUrl } from '../../data/covers';
 import { toIsbn13 } from '../../lookup/isbn';
+import { withSeriesFromWikidata } from '../../lookup/wikidata';
 import {
   type BookCandidate,
   type LookupProblem,
@@ -110,6 +111,8 @@ export function AddBook({
     const placeholder = replaceId ? await db.books.get(replaceId) : undefined;
     if (placeholder) book = { ...book, series: book.series ?? placeholder.series, seriesIndex: book.seriesIndex ?? placeholder.seriesIndex };
     if (isbn) book = { ...book, isbn13: isbn };
+    // Series details rarely come with lookups; Wikidata often knows them.
+    if (candidate) book = await withSeriesFromWikidata(book);
     // Pre-fill the first cover so the form shows something; it can be changed before saving.
     if (candidate?.coverUrls[0]) book = await setCoverFromUrl(book, candidate.coverUrls[0]);
     setDraft({ book, candidate });

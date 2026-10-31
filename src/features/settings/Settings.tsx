@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { withSeriesFromWikidata } from '../../lookup/wikidata';
 import { Field } from '../../app/ui';
 import { setMeta } from '../../data/db';
 import { useLive } from '../../data/hooks';
-import { loadSettings, saveSettings } from '../../data/store';
+import { liveBooks, loadSettings, saveBook, saveSettings } from '../../data/store';
 import { type SyncConfig, loadConfig, saveConfig } from '../../sync/github';
 import { syncNow } from '../../sync/scheduler';
 import { useSyncState } from '../../app/SyncIndicator';
@@ -31,6 +32,7 @@ export function Settings({ section }: { section?: string }) {
       <section id="lookups" class="card">
         <h2>Book lookups</h2>
         <LookupSettings />
+        <FillSeries />
       </section>
       <section id="readers" class="card">
         <h2>Readers</h2>
@@ -128,6 +130,57 @@ function SyncSettings() {
         <button class="primary">{existing ? 'Save' : 'Connect'}</button>
       </div>
     </form>
+  );
+}
+
+/** One pass over books with no series, filling in what Wikidata knows. */
+function FillSeries() {
+  const books = useLive(liveBooks);
+  const [run, setRun] = useState<{ done: number; total: number; found: number; stopped: boolean } | null>(null);
+  const stop = useRef(false);
+  if (!books) return null;
+  const missing = books.filter((b) => !b.series && !b.seriesPlaceholder && b.title.trim());
+
+  const start = async () => {
+    stop.current = false;
+    let found = 0;
+    setRun({ done: 0, total: missing.length, found, stopped: false });
+    for (let i = 0; i < missing.length; i++) {
+      if (stop.current) break;
+      const book = missing[i];
+      const filled = await withSeriesFromWikidata(book, 10000);
+      if (filled.series) {
+        found++;
+        await saveBook(filled);
+      }
+      setRun({ done: i + 1, total: missing.length, found, stopped: false });
+    }
+    setRun((r) => (r ? { ...r, stopped: stop.current } : r));
+  };
+
+  return (
+    <div class="fill-series">
+      <h3>Series details</h3>
+      <p class="muted">
+        Series and numbers drive the series pages and putting the next book on To Read. Wikidata knows them for many
+        well-known series.
+      </p>
+      {run && (
+        <p class="notice">
+          {run.done < run.total && !run.stopped ? 'Checking' : run.stopped ? 'Stopped after' : 'Checked'} {run.done} of{' '}
+          {run.total} books · found the series for {run.found}.
+        </p>
+      )}
+      <div class="form-actions">
+        {run && run.done < run.total && !run.stopped ? (
+          <button onClick={() => (stop.current = true)}>Stop</button>
+        ) : (
+          <button disabled={missing.length === 0} onClick={start}>
+            {missing.length ? `Fill in series for ${missing.length} book${missing.length === 1 ? '' : 's'}` : 'Every book has a series'}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

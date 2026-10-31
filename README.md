@@ -60,7 +60,11 @@ Locations follow a fixed hierarchy: **room → bookcase → shelf → row (front
 The Up Next tab (in place of Discover for now; Discover is linked from it) has the queue at the top, then:
 - **On the radar:** books pinned with 📌 that you're thinking of queueing soon, at the top of the list. Queueing one unpins it.
 - **To Read:** every book marked To Read, owned, borrowed or on the wishlist, with sort and fiction/nonfiction filters.
-- **Next in series:** finishing a book with a series and number puts the next one on To Read, if this is the furthest you've read in the series. If the next book is in the library with no plans, it's marked To Read; if it isn't, a placeholder like "Discworld #5" goes on To Read with a **Find** button that searches for it and swaps in the real book, keeping the series details.
+- **Next in series:** finishing a book with a series and number puts the next one on To Read, if this is the furthest you've read in the series. Series names match loosely ("Millennium series" = "The Millennium Trilogy" = "Millennium"). If the next book is in the library with no plans, it's marked To Read. If it can't be matched by series, its real title is looked up on Wikidata and the library is checked for that title, so a sequel added without series details is still found (and gets them filled in). Only if it truly isn't in the library does a placeholder go on To Read, named after the real book when Wikidata knows it ("Discworld #5" otherwise), with a **Find** button that swaps in the real book. Placeholders disappear by themselves once the real book is saved into that slot.
+
+### Series
+- **Series page** (tap the series under a book's title, or Library → Filter → Browse series): every book in the series in order, from Wikidata, each marked as in your library (with reading status and read dots) or not, with **Add** for missing ones. Books you own under that title but not filed in the series get a **Set as #N** button (or update them all at once). Rename a series for all its books in one go. When Wikidata doesn't know a series, the page lists the books in your library.
+- **Series details filled in for you:** adding a book looks up its series and number on Wikidata when they're missing, and Settings → Book lookups → **Fill in series** does the same for books already in the library.
 
 ### Up Next queue
 - A horizontally scrolling gallery at the top of the home screen. It can show fiction and nonfiction as two rows, or one row with a toggle.

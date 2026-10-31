@@ -11,6 +11,7 @@ import { effectiveWordCount } from '../reading/logic';
 import { ReadingCard } from '../reading/ReadingCard';
 import { useCalibration } from '../reading/useCalibration';
 import { WordCountCard } from '../reading/WordCountCard';
+import { seriesHref } from '../series/SeriesPage';
 import { BookForm } from './BookForm';
 
 export function BookDetail({ id }: { id: string }) {
@@ -48,6 +49,14 @@ export function BookDetail({ id }: { id: string }) {
         {book.title}
         {book.authors.length > 0 && <span class="muted"> · {book.authors.join(', ')}</span>}
       </h1>
+      {book.series && (
+        <p class="series-link">
+          <a href={seriesHref(book.series)}>
+            {book.seriesIndex !== null ? `Book ${book.seriesIndex} in ` : ''}
+            {book.series} ›
+          </a>
+        </p>
+      )}
       <QueueButton book={book} />
       <ReadingCard book={book} words={effective?.value ?? null} />
       <WordCountCard book={book} effective={effective} calibration={calibration} />
